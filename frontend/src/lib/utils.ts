@@ -12,7 +12,9 @@ export function generateAiyuejiConfig(
   token?: string,
   format: string = 'mp3'
 ): AiyuejiConfig {
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+  };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -25,7 +27,7 @@ export function generateAiyuejiConfig(
     _TTSConfigID: `mimo_${Date.now()}`,
     httpConfigs: {
       useCookies: 1,
-      headers: {} as any,
+      headers,
     },
     ttsHandles: [
       {

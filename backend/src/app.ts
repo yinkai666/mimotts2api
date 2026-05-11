@@ -2,6 +2,7 @@ import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import multipart from '@fastify/multipart';
+import { URLSearchParams } from 'url';
 import { config } from './config/env';
 import { authenticate } from './middleware/auth';
 
@@ -36,6 +37,18 @@ export async function buildApp(): Promise<FastifyInstance> {
       fileSize: config.upload.maxSizeMB * 1024 * 1024,
     },
   });
+
+  fastify.addContentTypeParser(
+    'application/x-www-form-urlencoded',
+    { parseAs: 'string' },
+    (_request, body, done) => {
+      const parsed: Record<string, string> = {};
+      for (const [key, value] of new URLSearchParams(body as string)) {
+        parsed[key] = value;
+      }
+      done(null, parsed);
+    }
+  );
 
   // 添加认证装饰器
   fastify.decorate('authenticate', authenticate);
