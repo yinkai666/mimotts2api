@@ -75,9 +75,7 @@ export interface AiyuejiConfig {
     };
     httpConfigs: {
       useCookies: number;
-      headers: {
-        Authorization: string;
-      };
+      headers: Record<string, string>;
     };
   }>;
   _TTSName: string;
