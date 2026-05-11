@@ -31,6 +31,10 @@ POSTGRES_PASSWORD=your_secure_password_123
 # JWT 密钥（至少 32 字符，自定义）
 JWT_SECRET=your_jwt_secret_key_at_least_32_characters_long_here
 
+# 管理员账号（首次初始化数据库时使用）
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=your_secure_admin_password
+
 # MiMo API Key（从官网获取）
 MIMO_API_KEY=sk-your-mimo-api-key-here
 
@@ -61,15 +65,13 @@ docker compose logs -f
 
 打开浏览器访问：http://localhost:14678
 
-默认账号：
-- 用户名: `admin`
-- 密码: `admin123`
+使用 `.env` 中配置的 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD` 登录。
 
 ## 快速测试
 
 ### 1. 登录管理后台
 
-访问 http://localhost，使用默认账号登录。
+访问 http://localhost，使用 `.env` 中配置的管理员账号登录。
 
 ### 2. 测试语音合成
 

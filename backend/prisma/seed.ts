@@ -7,17 +7,31 @@ async function main() {
   console.log('Seeding database...');
 
   // 创建默认管理员
-  const hashedPassword = await bcrypt.hash('admin123', 10);
-  const admin = await prisma.user.upsert({
-    where: { username: 'admin' },
-    update: {},
-    create: {
-      username: 'admin',
-      password: hashedPassword,
-      role: 'admin',
-    },
-  });
-  console.log('Created admin user:', admin.username);
+  const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+  const adminPassword = process.env.ADMIN_PASSWORD;
+
+  const existingUserCount = await prisma.user.count();
+  if (existingUserCount === 0 && !adminPassword) {
+    throw new Error('ADMIN_PASSWORD is required when initializing the first administrator.');
+  }
+
+  if (existingUserCount === 0 && adminPassword) {
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+    const admin = await prisma.user.create({
+      data: {
+        username: adminUsername,
+        password: hashedPassword,
+        role: 'admin',
+      },
+    });
+    console.log('Created admin user:', admin.username);
+  } else {
+    const admin = await prisma.user.findFirst({
+      where: { username: adminUsername },
+      select: { username: true },
+    });
+    console.log('Admin user already exists:', admin?.username || 'custom username');
+  }
 
   // 创建内置音色
   const builtinVoices = [

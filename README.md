@@ -62,6 +62,10 @@ POSTGRES_PASSWORD=your_secure_password
 # JWT 密钥（至少 32 字符）
 JWT_SECRET=your_jwt_secret_at_least_32_characters_long
 
+# 管理员账号（首次初始化数据库时使用）
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=your_secure_admin_password
+
 # MiMo API Key（从 https://platform.xiaomimimo.com 获取）
 MIMO_API_KEY=sk-your-mimo-api-key
 
@@ -82,9 +86,7 @@ docker compose up -d
 
 首次启动后，数据库会自动迁移并创建种子数据。
 
-默认管理员账号：
-- 用户名: `admin`
-- 密码: `admin123`
+管理员账号来自 `.env` 中的 `ADMIN_USERNAME` 和 `ADMIN_PASSWORD`。数据库已有管理员用户后，重新启动不会覆盖现有密码。
 
 #### 5. 访问服务
 
@@ -152,6 +154,8 @@ nano .env  # 或使用 vi
 ```env
 POSTGRES_PASSWORD=your_secure_password_here
 JWT_SECRET=your_jwt_secret_at_least_32_characters_long
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=your_secure_admin_password
 MIMO_API_KEY=sk-your-mimo-api-key
 PROXY_AUTH_TOKEN=your_custom_proxy_token
 PORT=14678
@@ -411,7 +415,7 @@ tar -xzf uploads_backup_20240101.tar.gz -C /opt/mimotts2api
 ### 管理后台
 
 1. 访问 http://localhost
-2. 使用默认账号登录：`admin` / `admin123`
+2. 使用 `.env` 中配置的管理员账号和密码登录
 3. 进入仪表盘，可以：
    - 测试语音合成
    - 查看音色库
@@ -525,6 +529,8 @@ mimotts2api/
 |------|------|--------|------|
 | `POSTGRES_PASSWORD` | PostgreSQL 密码 | - | 是 |
 | `JWT_SECRET` | JWT 密钥 | - | 是 |
+| `ADMIN_USERNAME` | 首次初始化的管理员用户名 | `admin` | 否 |
+| `ADMIN_PASSWORD` | 首次初始化的管理员密码 | - | 是 |
 | `MIMO_API_KEY` | MiMo API Key | - | 是 |
 | `MIMO_API_BASE_URL` | MiMo API 地址 | `https://api.xiaomimimo.com/v1` | 否 |
 | `PROXY_AUTH_TOKEN` | 代理访问 Token | - | 是 |
@@ -609,7 +615,7 @@ UPDATE users SET password = '$2b$10$...' WHERE username = 'admin';
 
 ## 安全建议
 
-1. **修改默认密码**：首次登录后立即修改管理员密码
+1. **设置强管理员密码**：部署前在 `.env` 中设置 `ADMIN_PASSWORD`，上线后可在后台继续修改
 2. **使用强密钥**：JWT_SECRET 和 PROXY_AUTH_TOKEN 使用强随机字符串
 3. **HTTPS 部署**：生产环境使用 HTTPS（配置 SSL 证书）
 4. **限制访问**：使用防火墙限制管理后台访问

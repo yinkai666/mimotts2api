@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { voiceApi, synthesisApi, settingsApi } from '@/lib/api';
+import { voiceApi, synthesisApi, settingsApi, authApi } from '@/lib/api';
 import { generateAiyuejiConfig, downloadBlob } from '@/lib/utils';
 import type { Voice, AppSetting } from '@/types';
 
@@ -30,6 +30,13 @@ export default function DashboardPage() {
   const [editSettings, setEditSettings] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [settingsMsg, setSettingsMsg] = useState('');
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordMsg, setPasswordMsg] = useState('');
 
   useEffect(() => { loadData(); }, []);
 
@@ -95,6 +102,36 @@ export default function DashboardPage() {
       setSettingsMsg('Token 已清除，API 不再需要鉴权');
       const fresh = await settingsApi.getAll(); setSettings(fresh);
     } catch (e: any) { alert('操作失败'); }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordMsg('');
+
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      setPasswordMsg('请完整填写当前密码和新密码');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 8) {
+      setPasswordMsg('新密码至少需要 8 个字符');
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordMsg('两次输入的新密码不一致');
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      await authApi.changePassword(passwordForm.currentPassword, passwordForm.newPassword);
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPasswordMsg('密码修改成功，请使用新密码登录');
+    } catch (e: any) {
+      setPasswordMsg('密码修改失败: ' + (e.response?.data?.error || e.message));
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   const handleLogout = () => { localStorage.removeItem('token'); router.push('/'); };
@@ -266,6 +303,45 @@ export default function DashboardPage() {
               {settingsMsg && (
                 <div className={`px-4 py-3 rounded ${settingsMsg.includes('失败') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>{settingsMsg}</div>
               )}
+
+              {/* 管理员密码 */}
+              <div className="border rounded-lg p-4 space-y-4">
+                <h3 className="font-semibold text-gray-800">管理员密码</h3>
+                <p className="text-xs text-gray-500">修改当前登录管理员的后台登录密码。建议使用长度足够、不可猜测的密码。</p>
+
+                {passwordMsg && (
+                  <div className={`px-4 py-3 rounded ${passwordMsg.includes('成功') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{passwordMsg}</div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">当前密码</label>
+                  <input type="password" value={passwordForm.currentPassword}
+                    onChange={e => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    autoComplete="current-password" />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">新密码</label>
+                  <input type="password" value={passwordForm.newPassword}
+                    onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    autoComplete="new-password" />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">确认新密码</label>
+                  <input type="password" value={passwordForm.confirmPassword}
+                    onChange={e => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    autoComplete="new-password" />
+                </div>
+
+                <button onClick={handleChangePassword} disabled={changingPassword}
+                  className="px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 disabled:opacity-50">
+                  {changingPassword ? '修改中...' : '修改密码'}
+                </button>
+              </div>
 
               {/* MiMo API 配置区域 */}
               <div className="border rounded-lg p-4 space-y-4">

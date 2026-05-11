@@ -48,6 +48,10 @@ export const authApi = {
   logout: async () => {
     await api.post('/api/auth/logout');
   },
+  changePassword: async (currentPassword: string, newPassword: string): Promise<{ message: string }> => {
+    const { data } = await api.put('/api/auth/password', { currentPassword, newPassword });
+    return data;
+  },
 };
 
 // Voice API

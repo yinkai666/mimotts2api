@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { comparePassword } from '../utils/crypto';
+import { comparePassword, hashPassword } from '../utils/crypto';
 import { JWTPayload, LoginRequest, LoginResponse } from '../types';
 
 const prisma = new PrismaClient();
@@ -39,6 +39,33 @@ export class AuthService {
         createdAt: true,
       },
     });
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<{ ok: boolean; reason?: 'user_not_found' | 'invalid_current_password' }> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return { ok: false, reason: 'user_not_found' };
+    }
+
+    const isPasswordValid = await comparePassword(currentPassword, user.password);
+    if (!isPasswordValid) {
+      return { ok: false, reason: 'invalid_current_password' };
+    }
+
+    const newPasswordHash = await hashPassword(newPassword);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: newPasswordHash },
+    });
+
+    return { ok: true };
   }
 
   /**

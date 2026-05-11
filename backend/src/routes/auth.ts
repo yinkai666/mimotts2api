@@ -12,6 +12,11 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8, 'New password must be at least 8 characters'),
+});
+
 export async function authRoutes(fastify: FastifyInstance) {
   // 登录
   fastify.post('/api/auth/login', async (request, reply) => {
@@ -61,5 +66,33 @@ export async function authRoutes(fastify: FastifyInstance) {
     onRequest: [fastify.authenticate],
   }, async (request, reply) => {
     return { message: 'Logged out successfully' };
+  });
+
+  // 修改当前管理员密码
+  fastify.put('/api/auth/password', {
+    onRequest: [fastify.authenticate],
+  }, async (request, reply) => {
+    try {
+      const body = changePasswordSchema.parse(request.body);
+      const result = await authService.changePassword(
+        getJWTPayload(request).userId,
+        body.currentPassword,
+        body.newPassword
+      );
+
+      if (!result.ok) {
+        if (result.reason === 'invalid_current_password') {
+          return reply.status(400).send({ error: 'Current password is incorrect' });
+        }
+        return reply.status(404).send({ error: 'User not found' });
+      }
+
+      return { message: 'Password changed successfully' };
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ error: 'Invalid request', details: error.errors });
+      }
+      return reply.status(500).send({ error: error.message });
+    }
   });
 }
