@@ -1,7 +1,11 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { authService } from '../services/auth.service';
-import { config } from '../config/env';
+import { JWTPayload } from '../types';
+
+function getJWTPayload(request: any): JWTPayload {
+  return request.user as JWTPayload;
+}
 
 const loginSchema = z.object({
   username: z.string().min(1),
@@ -42,7 +46,7 @@ export async function authRoutes(fastify: FastifyInstance) {
     onRequest: [fastify.authenticate],
   }, async (request, reply) => {
     try {
-      const user = await authService.getUserById(request.user!.userId);
+      const user = await authService.getUserById(getJWTPayload(request).userId);
       if (!user) {
         return reply.status(404).send({ error: 'User not found' });
       }

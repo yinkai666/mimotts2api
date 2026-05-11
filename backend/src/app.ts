@@ -3,7 +3,6 @@ import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import multipart from '@fastify/multipart';
 import { config } from './config/env';
-import { logger } from './utils/logger';
 import { authenticate } from './middleware/auth';
 
 // 路由
@@ -16,7 +15,9 @@ import { audioRoutes } from './routes/v1/audio';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const fastify = Fastify({
-    logger: logger,
+    logger: config.isDevelopment
+      ? { transport: { target: 'pino-pretty', options: { colorize: true } } }
+      : true,
     bodyLimit: config.upload.maxSizeMB * 1024 * 1024,
   });
 
