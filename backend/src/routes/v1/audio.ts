@@ -20,6 +20,35 @@ const speechSchema = z.object({
   message: 'Either input or text must be provided',
 });
 
+/**
+ * 代理 Token 鉴权逻辑：
+ * - 如果数据库配置了 proxy_auth_token，则必须验证
+ * - 如果没有配置，则跳过鉴权（直接放行）
+ */
+async function checkProxyAuth(request: any): Promise<{ authorized: boolean; reason?: string }> {
+  const token = extractBearerToken(request.headers.authorization);
+  return authService.verifyProxyToken(token);
+}
+
+function buildAuthError(reason: string) {
+  if (reason === 'missing_token') {
+    return {
+      error: {
+        message: 'Missing authorization token. This server requires a Bearer token.',
+        type: 'invalid_request_error',
+        code: 'missing_token',
+      },
+    };
+  }
+  return {
+    error: {
+      message: 'Invalid authorization token',
+      type: 'invalid_request_error',
+      code: 'invalid_token',
+    },
+  };
+}
+
 export async function audioRoutes(fastify: FastifyInstance) {
   // POST /v1/audio/speech - 爱阅记兼容接口
   fastify.post('/v1/audio/speech', {
@@ -28,27 +57,10 @@ export async function audioRoutes(fastify: FastifyInstance) {
     const startTime = Date.now();
 
     try {
-      // 1. 验证 Bearer Token
-      const token = extractBearerToken(request.headers.authorization);
-      if (!token) {
-        return reply.status(401).send({
-          error: {
-            message: 'Missing authorization token',
-            type: 'invalid_request_error',
-            code: 'missing_token',
-          },
-        });
-      }
-
-      const isValidToken = await authService.verifyProxyToken(token);
-      if (!isValidToken) {
-        return reply.status(401).send({
-          error: {
-            message: 'Invalid authorization token',
-            type: 'invalid_request_error',
-            code: 'invalid_token',
-          },
-        });
+      // 1. 验证代理 Token（可选）
+      const authResult = await checkProxyAuth(request);
+      if (!authResult.authorized) {
+        return reply.status(401).send(buildAuthError(authResult.reason!));
       }
 
       // 2. 解析参数
@@ -126,27 +138,10 @@ export async function audioRoutes(fastify: FastifyInstance) {
     onRequest: [rateLimit],
   }, async (request, reply) => {
     try {
-      // 验证 Token
-      const token = extractBearerToken(request.headers.authorization);
-      if (!token) {
-        return reply.status(401).send({
-          error: {
-            message: 'Missing authorization token',
-            type: 'invalid_request_error',
-            code: 'missing_token',
-          },
-        });
-      }
-
-      const isValidToken = await authService.verifyProxyToken(token);
-      if (!isValidToken) {
-        return reply.status(401).send({
-          error: {
-            message: 'Invalid authorization token',
-            type: 'invalid_request_error',
-            code: 'invalid_token',
-          },
-        });
+      // 验证 Token（可选）
+      const authResult = await checkProxyAuth(request);
+      if (!authResult.authorized) {
+        return reply.status(401).send(buildAuthError(authResult.reason!));
       }
 
       // 从 query 参数解析

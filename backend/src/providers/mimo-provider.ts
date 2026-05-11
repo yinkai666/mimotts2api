@@ -8,25 +8,26 @@ import {
   VoiceResult,
   ProviderVoice,
 } from './tts-provider';
-import { config } from '../config/env';
 import { logger } from '../utils/logger';
 
 export class MiMoProvider implements TTSProvider {
   private httpClient: AxiosInstance;
-  private apiKey: string;
+  private apiKey: string = '';
+  private baseUrl: string = '';
 
-  constructor(apiKey?: string) {
-    this.apiKey = apiKey || config.mimo.apiKey;
-
+  constructor() {
+    // 初始化一个空的 httpClient，后续通过 updateConfig 动态配置
     this.httpClient = axios.create({
-      baseURL: config.mimo.apiBaseUrl,
       timeout: 60000,
       headers: {
         'Content-Type': 'application/json',
-        'api-key': this.apiKey,
       },
     });
 
+    this.setupInterceptors();
+  }
+
+  private setupInterceptors() {
     this.httpClient.interceptors.request.use((config) => {
       logger.debug({ url: config.url, method: config.method }, 'MiMo API request');
       return config;
@@ -51,7 +52,29 @@ export class MiMoProvider implements TTSProvider {
     );
   }
 
+  /**
+   * 动态更新 MiMo API 配置（从数据库读取后调用）
+   */
+  updateConfig(apiKey: string, baseUrl: string) {
+    this.apiKey = apiKey;
+    this.baseUrl = baseUrl;
+
+    this.httpClient.defaults.baseURL = baseUrl;
+    this.httpClient.defaults.headers['api-key'] = apiKey;
+  }
+
+  /**
+   * 检查是否已配置
+   */
+  isConfigured(): boolean {
+    return !!(this.apiKey && this.baseUrl);
+  }
+
   async synthesizeText(params: SynthesizeParams): Promise<AudioResult> {
+    if (!this.isConfigured()) {
+      throw new Error('MiMo API 未配置，请在设置页面填写 API URL 和 API Key');
+    }
+
     const startTime = Date.now();
 
     try {
@@ -126,18 +149,15 @@ export class MiMoProvider implements TTSProvider {
 
   async createCustomVoice(params: CustomVoiceParams): Promise<VoiceResult> {
     // TODO: 等待 MiMo 官方文档确认 VoiceDesign 接口
-    // 临时方案：每次合成时动态传入描述
     throw new Error('VoiceDesign not implemented - waiting for official API documentation');
   }
 
   async cloneVoice(params: CloneVoiceParams): Promise<VoiceResult> {
     // TODO: 等待 MiMo 官方文档确认 VoiceClone 接口
-    // 临时方案：保存音频文件，每次合成时上传
     throw new Error('VoiceClone not implemented - waiting for official API documentation');
   }
 
   async listProviderVoices(): Promise<ProviderVoice[]> {
-    // 返回内置音色列表（硬编码）
     return [
       // V2 版本
       { id: 'mimo_default', name: 'MiMo 默认', language: 'zh', model: 'mimo-v2-tts' },
@@ -154,10 +174,5 @@ export class MiMoProvider implements TTSProvider {
       { id: 'Milo', name: 'Milo', language: 'en', gender: 'male', model: 'mimo-v2.5-tts' },
       { id: 'Dean', name: 'Dean', language: 'en', gender: 'male', model: 'mimo-v2.5-tts' },
     ];
-  }
-
-  updateApiKey(apiKey: string) {
-    this.apiKey = apiKey;
-    this.httpClient.defaults.headers['api-key'] = apiKey;
   }
 }

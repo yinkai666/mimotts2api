@@ -9,9 +9,14 @@ export function cn(...inputs: ClassValue[]) {
 export function generateAiyuejiConfig(
   voice: Voice,
   proxyUrl: string,
-  token: string,
+  token?: string,
   format: string = 'mp3'
 ): AiyuejiConfig {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   return {
     loginUrl: '',
     maxWordCount: '',
@@ -20,7 +25,7 @@ export function generateAiyuejiConfig(
     _TTSConfigID: `mimo_${Date.now()}`,
     httpConfigs: {
       useCookies: 1,
-      headers: {},
+      headers: {} as any,
     },
     ttsHandles: [
       {
@@ -29,7 +34,7 @@ export function generateAiyuejiConfig(
         maxPageCount: 1,
         method: 0,
         requestByWebView: 0,
-        nextPageParams: {},
+        nextPageParams: {} as any,
         parser: {
           playData: 'ResponseData',
         },
@@ -42,9 +47,7 @@ export function generateAiyuejiConfig(
         },
         httpConfigs: {
           useCookies: 1,
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers,
         },
       },
     ],

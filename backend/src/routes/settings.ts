@@ -7,6 +7,7 @@ import { synthesisService } from '../services/synthesis.service';
 const prisma = new PrismaClient();
 
 const updateSettingsSchema = z.object({
+  mimo_api_base_url: z.string().optional(),
   mimo_api_key: z.string().optional(),
   proxy_auth_token: z.string().optional(),
   default_model: z.string().optional(),
@@ -15,26 +16,34 @@ const updateSettingsSchema = z.object({
 });
 
 export async function settingsRoutes(fastify: FastifyInstance) {
-  // 获取配置（脱敏）
+  // 获取配置
   fastify.get('/api/settings', {
     onRequest: [fastify.authenticate],
   }, async (request, reply) => {
     try {
       const settings = await prisma.appSetting.findMany();
 
-      // 脱敏处理
-      const maskedSettings = settings.map((setting) => {
-        if (setting.key === 'mimo_api_key' || setting.key === 'proxy_auth_token') {
+      // 返回设置，敏感字段脱敏
+      return settings.map((setting) => {
+        if (setting.key === 'mimo_api_key') {
+          // API Key 脱敏，但标记是否有值
           return {
             ...setting,
             value: setting.value ? maskApiKey(setting.value) : '',
+            hasValue: !!setting.value,
+            masked: true,
+          };
+        }
+        if (setting.key === 'proxy_auth_token') {
+          return {
+            ...setting,
+            value: setting.value ? maskApiKey(setting.value) : '',
+            hasValue: !!setting.value,
             masked: true,
           };
         }
         return { ...setting, masked: false };
       });
-
-      return maskedSettings;
     } catch (error: any) {
       return reply.status(500).send({ error: error.message });
     }
@@ -54,11 +63,19 @@ export async function settingsRoutes(fastify: FastifyInstance) {
             update: { value },
             create: { key, value },
           });
+        }
+      }
 
-          // 如果更新了 MiMo API Key，更新服务实例
-          if (key === 'mimo_api_key') {
-            synthesisService.updateMimoApiKey(value);
-          }
+      // 如果更新了 MiMo 相关配置，同步更新 Provider
+      if (data.mimo_api_key || data.mimo_api_base_url) {
+        const [urlSetting, keySetting] = await Promise.all([
+          prisma.appSetting.findUnique({ where: { key: 'mimo_api_base_url' } }),
+          prisma.appSetting.findUnique({ where: { key: 'mimo_api_key' } }),
+        ]);
+        const url = urlSetting?.value || '';
+        const apiKey = keySetting?.value || '';
+        if (url && apiKey) {
+          synthesisService.updateMimoConfig(apiKey, url);
         }
       }
 
@@ -85,6 +102,23 @@ export async function settingsRoutes(fastify: FastifyInstance) {
       });
 
       return { token: newToken };
+    } catch (error: any) {
+      return reply.status(500).send({ error: error.message });
+    }
+  });
+
+  // 清除代理 Token（设为空，表示不启用鉴权）
+  fastify.post('/api/settings/clear-token', {
+    onRequest: [fastify.authenticate],
+  }, async (request, reply) => {
+    try {
+      await prisma.appSetting.upsert({
+        where: { key: 'proxy_auth_token' },
+        update: { value: '' },
+        create: { key: 'proxy_auth_token', value: '' },
+      });
+
+      return { message: 'Proxy token cleared. API access no longer requires authentication.' };
     } catch (error: any) {
       return reply.status(500).send({ error: error.message });
     }

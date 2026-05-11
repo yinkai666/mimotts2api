@@ -11,6 +11,23 @@ export class SynthesisService {
     this.mimoProvider = new MiMoProvider();
   }
 
+  /**
+   * 从数据库加载 MiMo 配置并更新 Provider
+   */
+  async ensureConfigLoaded() {
+    const [urlSetting, keySetting] = await Promise.all([
+      prisma.appSetting.findUnique({ where: { key: 'mimo_api_base_url' } }),
+      prisma.appSetting.findUnique({ where: { key: 'mimo_api_key' } }),
+    ]);
+
+    const url = urlSetting?.value || '';
+    const key = keySetting?.value || '';
+
+    if (url && key) {
+      this.mimoProvider.updateConfig(key, url);
+    }
+  }
+
   async synthesize(params: SynthesizeParams & { voiceLocalName?: string; clientIp?: string; userAgent?: string }) {
     const startTime = Date.now();
     let success = false;
@@ -18,11 +35,13 @@ export class SynthesisService {
     let audioSize: number | undefined;
 
     try {
+      // 每次合成前确保配置是最新的
+      await this.ensureConfigLoaded();
+
       const result = await this.mimoProvider.synthesizeText(params);
       success = true;
       audioSize = result.audioData.length;
 
-      // 记录日志
       await this.logSynthesis({
         voiceLocalName: params.voiceLocalName,
         providerVoiceId: params.voice,
@@ -44,7 +63,6 @@ export class SynthesisService {
       success = false;
       errorMessage = error.message;
 
-      // 记录失败日志
       await this.logSynthesis({
         voiceLocalName: params.voiceLocalName,
         providerVoiceId: params.voice,
@@ -82,9 +100,7 @@ export class SynthesisService {
     userAgent?: string;
   }) {
     try {
-      await prisma.synthesisLog.create({
-        data,
-      });
+      await prisma.synthesisLog.create({ data });
     } catch (error) {
       console.error('Failed to log synthesis:', error);
     }
@@ -133,8 +149,8 @@ export class SynthesisService {
     };
   }
 
-  updateMimoApiKey(apiKey: string) {
-    this.mimoProvider.updateApiKey(apiKey);
+  updateMimoConfig(apiKey: string, baseUrl: string) {
+    this.mimoProvider.updateConfig(apiKey, baseUrl);
   }
 }
 

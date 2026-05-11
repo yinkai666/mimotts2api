@@ -127,6 +127,10 @@ export const settingsApi = {
     const { data } = await api.post('/api/settings/regenerate-token');
     return data;
   },
+  clearToken: async (): Promise<{ message: string }> => {
+    const { data } = await api.post('/api/settings/clear-token');
+    return data;
+  },
 };
 
 export default api;
