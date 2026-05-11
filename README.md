@@ -75,7 +75,7 @@ PORT=14678
 #### 3. 启动服务
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 #### 4. 初始化数据库
@@ -111,18 +111,18 @@ ssh user@your-server-ip
 2. **安装 Docker（如果未安装）**
 
 ```bash
-# Ubuntu/Debian
+# Ubuntu/Debian — 一条命令安装 Docker + Compose v2
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 sudo usermod -aG docker $USER
 
-# 安装 Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-
 # 重新登录以应用 docker 组权限
 exit
 ssh user@your-server-ip
+
+# 验证安装
+docker --version
+docker compose version
 ```
 
 3. **上传项目到服务器**
@@ -160,14 +160,14 @@ PORT=14678
 5. **启动服务**
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 6. **查看服务状态**
 
 ```bash
-docker-compose ps
-docker-compose logs -f
+docker compose ps
+docker compose logs -f
 ```
 
 7. **配置防火墙**
@@ -209,7 +209,7 @@ sudo yum install certbot
 
 ```bash
 # 停止 Nginx（如果正在运行）
-docker-compose stop nginx
+docker compose stop nginx
 
 # 获取证书
 sudo certbot certonly --standalone -d tts.example.com
@@ -335,8 +335,8 @@ nginx:
 5. **重启服务**
 
 ```bash
-docker-compose down
-docker-compose up -d
+docker compose down
+docker compose up -d
 ```
 
 6. **配置防火墙**
@@ -358,7 +358,7 @@ sudo ufw reload
 sudo crontab -e
 
 # 添加以下行（每天凌晨 2 点检查并续期）
-0 2 * * * certbot renew --quiet && docker-compose -f /opt/mimotts2api/docker-compose.yml restart nginx
+0 2 * * * certbot renew --quiet && docker compose -f /opt/mimotts2api/docker-compose.yml restart nginx
 ```
 
 #### 服务器部署后的管理
@@ -366,32 +366,32 @@ sudo crontab -e
 **查看日志**：
 ```bash
 cd /opt/mimotts2api
-docker-compose logs -f
-docker-compose logs -f backend
-docker-compose logs -f frontend
+docker compose logs -f
+docker compose logs -f backend
+docker compose logs -f frontend
 ```
 
 **重启服务**：
 ```bash
-docker-compose restart
+docker compose restart
 ```
 
 **停止服务**：
 ```bash
-docker-compose stop
+docker compose stop
 ```
 
 **更新服务**：
 ```bash
 git pull
-docker-compose build
-docker-compose up -d
+docker compose build
+docker compose up -d
 ```
 
 **备份数据**：
 ```bash
 # 备份数据库
-docker-compose exec postgres pg_dump -U mimotts mimotts > backup_$(date +%Y%m%d).sql
+docker compose exec postgres pg_dump -U mimotts mimotts > backup_$(date +%Y%m%d).sql
 
 # 备份上传文件
 tar -czf uploads_backup_$(date +%Y%m%d).tar.gz -C /opt/mimotts2api uploads
@@ -400,7 +400,7 @@ tar -czf uploads_backup_$(date +%Y%m%d).tar.gz -C /opt/mimotts2api uploads
 **恢复数据**：
 ```bash
 # 恢复数据库
-docker-compose exec -T postgres psql -U mimotts mimotts < backup_20240101.sql
+docker compose exec -T postgres psql -U mimotts mimotts < backup_20240101.sql
 
 # 恢复上传文件
 tar -xzf uploads_backup_20240101.tar.gz -C /opt/mimotts2api
@@ -580,7 +580,7 @@ npm run prisma:seed
 - 代理服务地址是否正确（需要公网可访问）
 - 代理 Token 是否正确
 - 音色名称是否存在
-- 查看后端日志：`docker-compose logs -f backend`
+- 查看后端日志：`docker compose logs -f backend`
 
 ### 3. 如何修改管理员密码？
 

@@ -191,7 +191,7 @@ mimotts2api/
 
 ### Docker Compose（推荐）
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ### 手动部署

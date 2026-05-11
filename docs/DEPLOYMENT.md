@@ -17,7 +17,7 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-if ! command -v docker-compose &> /dev/null; then
+if ! command -v docker compose &> /dev/null; then
     echo "错误: 未安装 Docker Compose"
     exit 1
 fi
@@ -45,17 +45,17 @@ fi
 
 # 构建并启动
 echo "构建 Docker 镜像..."
-docker-compose build
+docker compose build
 
 echo "启动服务..."
-docker-compose up -d
+docker compose up -d
 
 echo "等待服务启动..."
 sleep 10
 
 # 检查服务状态
 echo "检查服务状态..."
-docker-compose ps
+docker compose ps
 
 # 显示日志
 echo ""
@@ -63,8 +63,8 @@ echo "=== 部署完成 ==="
 echo "管理后台: http://localhost"
 echo "默认账号: admin / admin123"
 echo ""
-echo "查看日志: docker-compose logs -f"
-echo "停止服务: docker-compose down"
+echo "查看日志: docker compose logs -f"
+echo "停止服务: docker compose down"
 echo ""
 ```
 
@@ -89,7 +89,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-docker-compose --version >nul 2>&1
+docker compose --version >nul 2>&1
 if errorlevel 1 (
     echo 错误: 未安装 Docker Compose
     exit /b 1
@@ -105,25 +105,25 @@ if not exist .env (
 
 REM 构建并启动
 echo 构建 Docker 镜像...
-docker-compose build
+docker compose build
 
 echo 启动服务...
-docker-compose up -d
+docker compose up -d
 
 echo 等待服务启动...
 timeout /t 10
 
 REM 检查服务状态
 echo 检查服务状态...
-docker-compose ps
+docker compose ps
 
 echo.
 echo === 部署完成 ===
 echo 管理后台: http://localhost
 echo 默认账号: admin / admin123
 echo.
-echo 查看日志: docker-compose logs -f
-echo 停止服务: docker-compose down
+echo 查看日志: docker compose logs -f
+echo 停止服务: docker compose down
 echo.
 pause
 ```
@@ -164,19 +164,19 @@ nano .env  # 或使用其他编辑器
 ### 4. 构建镜像
 
 ```bash
-docker-compose build
+docker compose build
 ```
 
 ### 5. 启动服务
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ### 6. 查看日志
 
 ```bash
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ### 7. 访问服务
@@ -264,20 +264,20 @@ assetPrefix: 'https://cdn.example.com',
 
 ```bash
 # 持续查看日志
-docker-compose logs -f
+docker compose logs -f
 
 # 查看特定服务日志
-docker-compose logs -f backend
+docker compose logs -f backend
 
 # 导出日志
-docker-compose logs > logs.txt
+docker compose logs > logs.txt
 ```
 
 2. **监控服务状态**：
 
 ```bash
 # 查看容器状态
-docker-compose ps
+docker compose ps
 
 # 查看资源使用
 docker stats
@@ -294,13 +294,13 @@ curl http://localhost/health
 #### 备份数据库
 
 ```bash
-docker-compose exec postgres pg_dump -U mimotts mimotts > backup.sql
+docker compose exec postgres pg_dump -U mimotts mimotts > backup.sql
 ```
 
 #### 恢复数据库
 
 ```bash
-docker-compose exec -T postgres psql -U mimotts mimotts < backup.sql
+docker compose exec -T postgres psql -U mimotts mimotts < backup.sql
 ```
 
 #### 备份上传文件
@@ -316,13 +316,13 @@ docker cp mimotts-backend:/app/uploads ./uploads_backup
 git pull
 
 # 重新构建
-docker-compose build
+docker compose build
 
 # 重启服务
-docker-compose up -d
+docker compose up -d
 
 # 查看日志确认
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ## 故障排查
@@ -331,26 +331,26 @@ docker-compose logs -f
 
 ```bash
 # 查看详细日志
-docker-compose logs
+docker compose logs
 
 # 检查端口占用
 netstat -tulpn | grep :14678
 netstat -tulpn | grep :3001
 
 # 重新构建
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
+docker compose down
+docker compose build --no-cache
+docker compose up -d
 ```
 
 ### 数据库连接失败
 
 ```bash
 # 检查数据库状态
-docker-compose exec postgres pg_isready -U mimotts
+docker compose exec postgres pg_isready -U mimotts
 
 # 重启数据库
-docker-compose restart postgres
+docker compose restart postgres
 ```
 
 ### 前端无法访问后端
@@ -361,10 +361,10 @@ docker-compose restart postgres
 
 ```bash
 # 停止并删除容器
-docker-compose down
+docker compose down
 
 # 删除数据卷（注意：会删除所有数据）
-docker-compose down -v
+docker compose down -v
 
 # 删除镜像
 docker rmi mimotts2api_backend mimotts2api_frontend
@@ -374,25 +374,25 @@ docker rmi mimotts2api_backend mimotts2api_frontend
 
 ```bash
 # 启动服务
-docker-compose up -d
+docker compose up -d
 
 # 停止服务
-docker-compose stop
+docker compose stop
 
 # 重启服务
-docker-compose restart
+docker compose restart
 
 # 查看日志
-docker-compose logs -f
+docker compose logs -f
 
 # 进入容器
-docker-compose exec backend sh
-docker-compose exec postgres psql -U mimotts
+docker compose exec backend sh
+docker compose exec postgres psql -U mimotts
 
 # 查看服务状态
-docker-compose ps
+docker compose ps
 
 # 更新服务
-docker-compose pull
-docker-compose up -d
+docker compose pull
+docker compose up -d
 ```

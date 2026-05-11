@@ -128,7 +128,7 @@ cp .env.example .env
 # 编辑 .env，填写 MIMO_API_KEY 等
 
 # 2. 启动服务
-docker-compose up -d
+docker compose up -d
 
 # 3. 访问
 # http://localhost:14678

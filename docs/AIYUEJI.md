@@ -162,7 +162,7 @@ https://tts.example.com
 
 3. 查看后端日志：
    ```bash
-   docker-compose logs -f backend
+   docker compose logs -f backend
    ```
 
 ### 2. 播放速度太慢
@@ -261,13 +261,13 @@ https://tts.example.com
 
 ```bash
 # 检查容器状态
-docker-compose ps
+docker compose ps
 
 # 查看后端日志
-docker-compose logs -f backend
+docker compose logs -f backend
 
 # 查看 Nginx 日志
-docker-compose logs -f nginx
+docker compose logs -f nginx
 ```
 
 ### 测试 API 接口

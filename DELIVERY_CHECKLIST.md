@@ -164,7 +164,7 @@
 ```bash
 cp .env.example .env
 # 编辑 .env
-docker-compose up -d
+docker compose up -d
 # 访问 http://localhost:14678
 ```
 
@@ -249,7 +249,7 @@ sudo bash deploy-server.sh
 
 ### 获取帮助
 1. 查看文档：`docs/` 目录
-2. 查看日志：`docker-compose logs -f`
+2. 查看日志：`docker compose logs -f`
 3. 提交 Issue：GitHub Issues
 
 ### 常见问题

@@ -41,14 +41,14 @@ PROXY_AUTH_TOKEN=your_custom_proxy_token_123
 ### 步骤 3: 启动服务
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ### 步骤 4: 等待服务启动
 
 ```bash
 # 查看启动日志
-docker-compose logs -f
+docker compose logs -f
 
 # 等待看到类似信息：
 # backend    | Server listening on port 3001
@@ -100,25 +100,25 @@ docker-compose logs -f
 
 ```bash
 # 启动服务
-docker-compose up -d
+docker compose up -d
 
 # 停止服务
-docker-compose stop
+docker compose stop
 
 # 重启服务
-docker-compose restart
+docker compose restart
 
 # 查看日志
-docker-compose logs -f
+docker compose logs -f
 
 # 查看服务状态
-docker-compose ps
+docker compose ps
 
 # 停止并删除容器
-docker-compose down
+docker compose down
 
 # 停止并删除容器和数据卷（注意：会删除所有数据）
-docker-compose down -v
+docker compose down -v
 ```
 
 ## 故障排查
@@ -127,7 +127,7 @@ docker-compose down -v
 
 ```bash
 # 查看详细日志
-docker-compose logs
+docker compose logs
 
 # 检查端口占用
 # Linux/Mac
@@ -143,12 +143,12 @@ netstat -ano | findstr :3001
 
 1. 检查 Docker 容器是否运行：
    ```bash
-   docker-compose ps
+   docker compose ps
    ```
 
 2. 检查 Nginx 日志：
    ```bash
-   docker-compose logs nginx
+   docker compose logs nginx
    ```
 
 3. 尝试直接访问后端：
@@ -162,7 +162,7 @@ netstat -ano | findstr :3001
 2. 检查代理 Token 是否正确
 3. 查看后端日志：
    ```bash
-   docker-compose logs -f backend
+   docker compose logs -f backend
    ```
 
 4. 测试 API 接口：
@@ -185,7 +185,7 @@ netstat -ano | findstr :3001
 
 - 查看文档：`docs/` 目录
 - 提交 Issue：GitHub Issues
-- 查看日志：`docker-compose logs -f`
+- 查看日志：`docker compose logs -f`
 
 ## 安全提示
 

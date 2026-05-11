@@ -38,10 +38,10 @@ fi
 # 2. 检查并安装 Docker Compose
 echo ""
 echo "步骤 2/7: 检查 Docker Compose..."
-if ! command -v docker-compose &> /dev/null; then
+if ! command -v docker compose &> /dev/null; then
     echo "Docker Compose 未安装，正在安装..."
-    curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
+    curl -L "https://github.com/docker/compose/releases/latest/download/docker compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker compose
+    chmod +x /usr/local/bin/docker compose
     echo "Docker Compose 安装完成"
 else
     echo "Docker Compose 已安装"
@@ -130,8 +130,8 @@ fi
 # 7. 启动服务
 echo ""
 echo "步骤 7/7: 启动服务..."
-docker-compose build
-docker-compose up -d
+docker compose build
+docker compose up -d
 
 echo ""
 echo "等待服务启动..."
@@ -140,7 +140,7 @@ sleep 10
 # 检查服务状态
 echo ""
 echo "服务状态："
-docker-compose ps
+docker compose ps
 
 echo ""
 echo "=== 部署完成 ==="
@@ -154,10 +154,10 @@ echo "代理 Token: $(grep "^PROXY_AUTH_TOKEN=" .env | cut -d'=' -f2)"
 echo "===================="
 echo ""
 echo "常用命令："
-echo "  查看日志: cd /opt/mimotts2api && docker-compose logs -f"
-echo "  重启服务: cd /opt/mimotts2api && docker-compose restart"
-echo "  停止服务: cd /opt/mimotts2api && docker-compose stop"
-echo "  更新服务: cd /opt/mimotts2api && git pull && docker-compose build && docker-compose up -d"
+echo "  查看日志: cd /opt/mimotts2api && docker compose logs -f"
+echo "  重启服务: cd /opt/mimotts2api && docker compose restart"
+echo "  停止服务: cd /opt/mimotts2api && docker compose stop"
+echo "  更新服务: cd /opt/mimotts2api && git pull && docker compose build && docker compose up -d"
 echo ""
 echo "重要提示："
 echo "  1. 首次登录后请立即修改管理员密码"
