@@ -12,6 +12,9 @@ RUN npm install
 # Copy source code
 COPY . .
 
+# Ensure optional static assets directory exists
+RUN mkdir -p public
+
 # Build Next.js app
 RUN npm run build
 
