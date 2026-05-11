@@ -1,0 +1,115 @@
+// Prisma schema for MiMo TTS Proxy Manager
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 用户表
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+// 应用设置
+model AppSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
+// 音色表
+model Voice {
+  id              String   @id @default(cuid())
+  displayName     String
+  localName       String   @unique
+  provider        String   @default("mimo")
+  type            String
+  model           String
+  providerVoiceId String?
+  configJson      String?
+  sampleFilePath  String?
+  consent         Boolean  @default(false)
+  remark          String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  synthesisCalls SynthesisLog[]
+
+  @@index([type])
+  @@index([isActive])
+  @@map("voices")
+}
+
+// 语音合成日志
+model SynthesisLog {
+  id              String   @id @default(cuid())
+  voiceId         String?
+  voice           Voice?   @relation(fields: [voiceId], references: [id], onDelete: SetNull)
+  voiceLocalName  String?
+  providerVoiceId String?
+  model           String
+  inputText       String   @db.Text
+  inputLength     Int
+  format          String
+  style           String?
+  speed           Float?
+  success         Boolean
+  errorMessage    String?  @db.Text
+  durationMs      Int?
+  audioSize       Int?
+  clientIp        String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+
+  @@index([success])
+  @@index([createdAt])
+  @@map("synthesis_logs")
+}
+
+// 上传文件记录
+model UploadFile {
+  id           String   @id @default(cuid())
+  fileName     String
+  originalName String
+  filePath     String
+  mimeType     String
+  size         Int
+  purpose      String
+  metadata     String?
+  createdAt    DateTime @default(now())
+
+  @@map("upload_files")
+}
+
+// API Token
+model ApiToken {
+  id          String    @id @default(cuid())
+  token       String    @unique
+  name        String
+  permissions String
+  expiresAt   DateTime?
+  lastUsedAt  DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([token])
+  @@index([isActive])
+  @@map("api_tokens")
+}
