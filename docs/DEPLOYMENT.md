@@ -144,7 +144,7 @@ deploy.bat
 ### 2. 克隆项目
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/yinkai666/mimotts2api.git
 cd mimotts2api
 ```
 

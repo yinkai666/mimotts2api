@@ -12,7 +12,7 @@
 
 ```bash
 cd /path/to/your/projects
-git clone <repository-url>
+git clone https://github.com/yinkai666/mimotts2api.git
 cd mimotts2api
 ```
 

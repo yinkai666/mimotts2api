@@ -59,7 +59,8 @@ echo "步骤 4/7: 获取项目文件..."
 read -p "是否从 Git 仓库克隆项目？(y/n): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    read -p "请输入 Git 仓库地址: " GIT_REPO
+    read -p "请输入 Git 仓库地址 [默认: https://github.com/yinkai666/mimotts2api.git]: " GIT_REPO
+    GIT_REPO=${GIT_REPO:-https://github.com/yinkai666/mimotts2api.git}
     if [ -d ".git" ]; then
         echo "项目已存在，正在更新..."
         git pull

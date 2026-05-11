@@ -1,5 +1,10 @@
 # MiMo TTS Proxy Manager
 
+> 一个完整的自建代理服务，用于将小米 MiMo TTS 接入爱阅记的高级自定义 TTS。
+
+[![GitHub](https://img.shields.io/badge/GitHub-yinkai666%2Fmimotts2api-blue?logo=github)](https://github.com/yinkai666/mimotts2api)
+[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/yinkai666/mimotts2api/blob/main/LICENSE)
+
 一个完整的自建代理服务，用于将小米 MiMo TTS 接入爱阅记的高级自定义 TTS。
 
 ## 功能特性
@@ -38,7 +43,7 @@
 #### 1. 克隆项目
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/yinkai666/mimotts2api.git
 cd mimotts2api
 ```
 
@@ -125,7 +130,7 @@ ssh user@your-server-ip
 方式 A：使用 Git
 ```bash
 cd /opt  # 或其他目录
-git clone <repository-url>
+git clone https://github.com/yinkai666/mimotts2api.git
 cd mimotts2api
 ```
 
