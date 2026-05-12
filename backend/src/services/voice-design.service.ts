@@ -17,6 +17,17 @@ export interface SaveVoiceDesignParams {
   sampleAudio: Buffer;
 }
 
+export interface SaveStyledPresetParams {
+  displayName: string;
+  localName: string;
+  baseVoiceLocalName: string;
+  baseProviderVoiceId: string;
+  style: string;
+  previewText: string;
+  format: 'mp3' | 'wav' | 'pcm16';
+  sampleAudio: Buffer;
+}
+
 export class VoiceDesignService {
   async saveDesign(params: SaveVoiceDesignParams): Promise<Voice> {
     const sampleFilePath = await this.saveSampleAudio(
@@ -39,6 +50,36 @@ export class VoiceDesignService {
           style: params.style,
           format: params.format,
           optimizeTextPreview: params.optimizeTextPreview,
+        }),
+        sampleFilePath,
+        consent: true,
+        isActive: true,
+      },
+    });
+  }
+
+  async saveStyledPreset(params: SaveStyledPresetParams): Promise<Voice> {
+    const sampleFilePath = await this.saveSampleAudio(
+      params.localName,
+      params.format,
+      params.sampleAudio
+    );
+
+    return prisma.voice.create({
+      data: {
+        displayName: params.displayName,
+        localName: params.localName,
+        provider: 'mimo',
+        type: 'styled',
+        model: 'mimo-v2.5-tts',
+        providerVoiceId: params.baseProviderVoiceId,
+        configJson: JSON.stringify({
+          kind: 'style_preset',
+          baseVoiceLocalName: params.baseVoiceLocalName,
+          baseProviderVoiceId: params.baseProviderVoiceId,
+          style: params.style,
+          previewText: params.previewText,
+          format: params.format,
         }),
         sampleFilePath,
         consent: true,

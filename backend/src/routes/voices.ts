@@ -32,6 +32,16 @@ const voiceDesignSchema = z.object({
   sampleAudioBase64: z.string().optional(),
 });
 
+const styledVoiceSchema = z.object({
+  displayName: z.string().min(1).optional(),
+  localName: z.string().regex(/^[a-z0-9_]+$/).optional(),
+  baseVoiceLocalName: z.string().min(1),
+  style: z.string().min(1).max(1000),
+  previewText: z.string().min(1).max(4096),
+  format: z.enum(['mp3', 'wav', 'pcm16']).default('wav'),
+  sampleAudioBase64: z.string().optional(),
+});
+
 function buildSampleUrl(id: string) {
   return `/api/voices/${id}/sample`;
 }
@@ -191,6 +201,103 @@ export async function voiceRoutes(fastify: FastifyInstance) {
         style: params.style,
         format: params.format,
         optimizeTextPreview: params.optimizeTextPreview,
+        sampleAudio,
+      });
+
+      return {
+        ...voice,
+        sampleUrl: buildSampleUrl(voice.id),
+      };
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ error: 'Invalid request', details: error.errors });
+      }
+      if (error.code === 'P2002') {
+        return reply.status(409).send({ error: 'Local name already exists' });
+      }
+      return reply.status(500).send({ error: error.message });
+    }
+  });
+
+  // 风格模板预览
+  fastify.post('/api/voices/styled/preview', {
+    onRequest: [fastify.authenticate],
+  }, async (request, reply) => {
+    try {
+      const params = styledVoiceSchema.parse(request.body);
+      const baseVoice = await voiceService.getByLocalName(params.baseVoiceLocalName);
+      if (!baseVoice) {
+        return reply.status(404).send({ error: 'Base voice not found' });
+      }
+      if (baseVoice.model !== 'mimo-v2.5-tts') {
+        return reply.status(400).send({ error: 'Styled presets only support mimo-v2.5-tts voices' });
+      }
+
+      const result = await synthesisService.synthesize({
+        text: params.previewText,
+        model: 'mimo-v2.5-tts',
+        voice: baseVoice.providerVoiceId || baseVoice.localName,
+        format: params.format,
+        style: params.style,
+        clientIp: request.ip,
+        userAgent: request.headers['user-agent'],
+      });
+
+      return reply
+        .header('Content-Type', getAudioMimeType(result.format))
+        .header('Content-Length', result.audioData.length)
+        .send(result.audioData);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ error: 'Invalid request', details: error.errors });
+      }
+      return reply.status(500).send({ error: error.message });
+    }
+  });
+
+  // 风格模板
+  fastify.post('/api/voices/styled', {
+    onRequest: [fastify.authenticate],
+  }, async (request, reply) => {
+    try {
+      const params = styledVoiceSchema.required({
+        displayName: true,
+        localName: true,
+      }).parse(request.body);
+
+      const baseVoice = await voiceService.getByLocalName(params.baseVoiceLocalName);
+      if (!baseVoice) {
+        return reply.status(404).send({ error: 'Base voice not found' });
+      }
+      if (baseVoice.model !== 'mimo-v2.5-tts') {
+        return reply.status(400).send({ error: 'Styled presets only support mimo-v2.5-tts voices' });
+      }
+
+      let sampleAudio: Buffer | undefined = params.sampleAudioBase64
+        ? Buffer.from(params.sampleAudioBase64, 'base64') as Buffer
+        : undefined;
+
+      if (!sampleAudio) {
+        const result = await synthesisService.synthesize({
+          text: params.previewText,
+          model: 'mimo-v2.5-tts',
+          voice: baseVoice.providerVoiceId || baseVoice.localName,
+          format: params.format,
+          style: params.style,
+          clientIp: request.ip,
+          userAgent: request.headers['user-agent'],
+        });
+        sampleAudio = result.audioData;
+      }
+
+      const voice = await voiceDesignService.saveStyledPreset({
+        displayName: params.displayName,
+        localName: params.localName,
+        baseVoiceLocalName: baseVoice.localName,
+        baseProviderVoiceId: baseVoice.providerVoiceId || baseVoice.localName,
+        style: params.style,
+        previewText: params.previewText,
+        format: params.format,
         sampleAudio,
       });
 

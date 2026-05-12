@@ -9,7 +9,7 @@ export interface Voice {
   displayName: string;
   localName: string;
   provider: string;
-  type: 'builtin' | 'custom' | 'cloned';
+  type: 'builtin' | 'styled' | 'custom' | 'cloned';
   model: string;
   providerVoiceId?: string;
   configJson?: string;

@@ -104,6 +104,29 @@ export const voiceApi = {
     const { data } = await api.post('/api/voices/custom', params);
     return data;
   },
+  previewStyled: async (params: {
+    baseVoiceLocalName: string;
+    style: string;
+    previewText: string;
+    format?: string;
+  }): Promise<Blob> => {
+    const { data } = await api.post('/api/voices/styled/preview', params, {
+      responseType: 'blob',
+    });
+    return data;
+  },
+  createStyled: async (params: {
+    displayName: string;
+    localName: string;
+    baseVoiceLocalName: string;
+    style: string;
+    previewText: string;
+    format?: string;
+    sampleAudioBase64?: string;
+  }): Promise<Voice & { sampleUrl?: string }> => {
+    const { data } = await api.post('/api/voices/styled', params);
+    return data;
+  },
 };
 
 // Synthesis API

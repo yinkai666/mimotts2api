@@ -80,4 +80,38 @@ describe('SynthesisService VoiceDesign templates', () => {
     );
     expect(providerMocks.synthesizeText.mock.calls[0][0]).not.toHaveProperty('voice', 'bedtime_voice');
   });
+
+  it('injects saved style preset config when synthesizing with a styled voice entry', async () => {
+    const service = new SynthesisService();
+
+    await service.synthesizeWithVoice({
+      text: '欢迎来到今晚的故事时间。',
+      voice: {
+        localName: 'moli_bedtime',
+        providerVoiceId: '茉莉',
+        model: 'mimo-v2.5-tts',
+        type: 'styled',
+        configJson: JSON.stringify({
+          kind: 'style_preset',
+          baseVoiceLocalName: 'moli',
+          baseProviderVoiceId: '茉莉',
+          style: '轻声、放松，像睡前陪伴',
+        }),
+      },
+      format: 'wav',
+      clientIp: '127.0.0.1',
+      userAgent: 'vitest',
+    });
+
+    expect(providerMocks.synthesizeText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: '欢迎来到今晚的故事时间。',
+        voice: '茉莉',
+        model: 'mimo-v2.5-tts',
+        format: 'wav',
+        voiceLocalName: 'moli_bedtime',
+        style: '轻声、放松，像睡前陪伴',
+      })
+    );
+  });
 });

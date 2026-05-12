@@ -91,4 +91,60 @@ describe('VoiceDesignService', () => {
     });
     expect(voice.id).toBe('voice-1');
   });
+
+  it('stores a styled voice preset bound to a builtin voice and its latest preview audio sample', async () => {
+    prismaMock.voice.create.mockResolvedValue({
+      id: 'voice-2',
+      displayName: '茉莉晚安',
+      localName: 'moli_bedtime',
+      type: 'styled',
+      model: 'mimo-v2.5-tts',
+      providerVoiceId: '茉莉',
+      sampleFilePath: 'uploads-test/voice-samples/sample.wav',
+      configJson: '{}',
+    });
+
+    const service = new VoiceDesignService();
+
+    const voice = await service.saveStyledPreset({
+      displayName: '茉莉晚安',
+      localName: 'moli_bedtime',
+      baseVoiceLocalName: 'moli',
+      baseProviderVoiceId: '茉莉',
+      style: '轻声、放松，像睡前陪伴',
+      previewText: '晚安，今天也辛苦了。',
+      format: 'wav',
+      sampleAudio: Buffer.from('styled-audio'),
+    });
+
+    expect(prismaMock.uploadFile.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        originalName: 'moli_bedtime_sample.wav',
+        mimeType: 'audio/wav',
+        purpose: 'voice-samples',
+        size: Buffer.from('styled-audio').length,
+      }),
+    });
+    expect(prismaMock.voice.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        displayName: '茉莉晚安',
+        localName: 'moli_bedtime',
+        provider: 'mimo',
+        type: 'styled',
+        model: 'mimo-v2.5-tts',
+        providerVoiceId: '茉莉',
+        consent: true,
+        isActive: true,
+        configJson: JSON.stringify({
+          kind: 'style_preset',
+          baseVoiceLocalName: 'moli',
+          baseProviderVoiceId: '茉莉',
+          style: '轻声、放松，像睡前陪伴',
+          previewText: '晚安，今天也辛苦了。',
+          format: 'wav',
+        }),
+      }),
+    });
+    expect(voice.id).toBe('voice-2');
+  });
 });

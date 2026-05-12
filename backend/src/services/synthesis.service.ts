@@ -100,7 +100,9 @@ export class SynthesisService {
 
     return this.synthesize({
       text: params.text,
-      voice: isVoiceDesign ? undefined : params.voice.providerVoiceId || params.voice.localName,
+      voice: isVoiceDesign
+        ? undefined
+        : voiceConfig.baseProviderVoiceId || params.voice.providerVoiceId || params.voice.localName,
       model: params.model || params.voice.model,
       format: params.format || 'mp3',
       style: params.style || voiceConfig.style,
@@ -116,7 +118,12 @@ export class SynthesisService {
 
   private parseVoiceConfig(configJson?: string | null): {
     voiceDesignPrompt?: string;
+    baseVoiceLocalName?: string;
+    baseProviderVoiceId?: string;
     style?: string;
+    previewText?: string;
+    format?: 'mp3' | 'wav' | 'pcm16';
+    kind?: string;
     optimizeTextPreview?: boolean;
   } {
     if (!configJson) return {};
@@ -124,8 +131,13 @@ export class SynthesisService {
     try {
       const parsed = JSON.parse(configJson);
       return {
+        kind: parsed.kind,
         voiceDesignPrompt: parsed.voiceDesignPrompt || parsed.description,
+        baseVoiceLocalName: parsed.baseVoiceLocalName,
+        baseProviderVoiceId: parsed.baseProviderVoiceId,
         style: parsed.style,
+        previewText: parsed.previewText,
+        format: parsed.format,
         optimizeTextPreview: parsed.optimizeTextPreview,
       };
     } catch {
