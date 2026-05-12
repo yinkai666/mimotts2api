@@ -99,13 +99,15 @@ export class SynthesisService {
     const isVoiceDesign = params.voice.model === 'mimo-v2.5-tts-voicedesign';
 
     return this.synthesize({
-      text: params.text,
+      text: voiceConfig.tagPrefix && !params.text.trim().startsWith(voiceConfig.tagPrefix)
+        ? `${voiceConfig.tagPrefix}${params.text}`
+        : params.text,
       voice: isVoiceDesign
         ? undefined
         : voiceConfig.baseProviderVoiceId || params.voice.providerVoiceId || params.voice.localName,
       model: params.model || params.voice.model,
       format: params.format || 'mp3',
-      style: params.style || voiceConfig.style,
+      style: (params.style || voiceConfig.style)?.trim() || undefined,
       speed: params.speed,
       language: params.language,
       voiceLocalName: params.voice.localName,
@@ -121,6 +123,7 @@ export class SynthesisService {
     baseVoiceLocalName?: string;
     baseProviderVoiceId?: string;
     style?: string;
+    tagPrefix?: string;
     previewText?: string;
     format?: 'mp3' | 'wav' | 'pcm16';
     kind?: string;
@@ -136,6 +139,7 @@ export class SynthesisService {
         baseVoiceLocalName: parsed.baseVoiceLocalName,
         baseProviderVoiceId: parsed.baseProviderVoiceId,
         style: parsed.style,
+        tagPrefix: parsed.tagPrefix,
         previewText: parsed.previewText,
         format: parsed.format,
         optimizeTextPreview: parsed.optimizeTextPreview,

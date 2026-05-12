@@ -22,6 +22,10 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
+function hasLeadingStyleTag(text: string): boolean {
+  return /^[\(\[（][^)\]）]{1,100}[\)\]）]/.test(text.trim());
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('synthesize');
@@ -130,8 +134,8 @@ export default function DashboardPage() {
   };
 
   const handlePreviewStyled = async () => {
-    if (!styledForm.baseVoiceLocalName || !styledForm.style || !styledForm.previewText) {
-      setStyledMsg('请填写基础音色、风格控制和预览文本');
+    if (!styledForm.baseVoiceLocalName || !styledForm.previewText || (!styledForm.style.trim() && !hasLeadingStyleTag(styledForm.previewText))) {
+      setStyledMsg('请填写基础音色，并提供风格控制或在预览文本开头使用整体风格标签');
       return;
     }
 
@@ -155,8 +159,8 @@ export default function DashboardPage() {
   };
 
   const handleSaveStyled = async () => {
-    if (!styledForm.displayName || !styledForm.localName || !styledForm.baseVoiceLocalName || !styledForm.style || !styledForm.previewText) {
-      setStyledMsg('请完整填写显示名称、调用名称、基础音色、风格控制和预览文本');
+    if (!styledForm.displayName || !styledForm.localName || !styledForm.baseVoiceLocalName || !styledForm.previewText || (!styledForm.style.trim() && !hasLeadingStyleTag(styledForm.previewText))) {
+      setStyledMsg('请完整填写显示名称、调用名称、基础音色，并提供风格控制或整体风格标签');
       return;
     }
 
@@ -376,7 +380,7 @@ export default function DashboardPage() {
     apiBaseUrl,
     model: 'mimo-v2.5-tts',
     format: styledForm.format,
-    userContent: styledForm.style,
+    userContent: styledForm.style || undefined,
     assistantText: styledForm.previewText,
     voice: styledBaseVoice?.providerVoiceId || styledBaseVoice?.localName,
   });
@@ -515,7 +519,7 @@ export default function DashboardPage() {
                       onChange={e => setStyledForm({ ...styledForm, style: e.target.value })} rows={5}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                       placeholder="例如：轻声、放松，像睡前陪伴；语速稍慢，句尾自然放缓。" />
-                    <p className="text-xs text-gray-400 mt-1">这里只保存自然语言控制。如果你要测试音频标签控制，请直接把标签写进「预览文本」。</p>
+                    <p className="text-xs text-gray-400 mt-1">这里可以留空。如果你要用音频标签控制，请在「预览文本」开头写整体风格标签，例如 `(慵懒)` 或 `[温柔]`。</p>
                   </div>
                 </div>
 
@@ -540,12 +544,12 @@ export default function DashboardPage() {
 
                   <div className="flex flex-wrap gap-3">
                     <button onClick={handlePreviewStyled}
-                      disabled={previewingStyled || !styledForm.baseVoiceLocalName || !styledForm.style || !styledForm.previewText}
+                      disabled={previewingStyled || !styledForm.baseVoiceLocalName || !styledForm.previewText || (!styledForm.style.trim() && !hasLeadingStyleTag(styledForm.previewText))}
                       className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
                       {previewingStyled ? '合成中...' : '合成预览'}
                     </button>
                     <button onClick={handleSaveStyled}
-                      disabled={savingStyled || !styledPreviewBlob || !styledForm.displayName || !styledForm.localName || !styledForm.baseVoiceLocalName || !styledForm.style || !styledForm.previewText}
+                      disabled={savingStyled || !styledPreviewBlob || !styledForm.displayName || !styledForm.localName || !styledForm.baseVoiceLocalName || !styledForm.previewText || (!styledForm.style.trim() && !hasLeadingStyleTag(styledForm.previewText))}
                       className="px-6 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 disabled:opacity-50">
                       {savingStyled ? '保存中...' : '保存到音色库'}
                     </button>

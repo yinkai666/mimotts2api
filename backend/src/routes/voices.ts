@@ -32,15 +32,29 @@ const voiceDesignSchema = z.object({
   sampleAudioBase64: z.string().optional(),
 });
 
-const styledVoiceSchema = z.object({
+const styledVoiceBaseSchema = z.object({
   displayName: z.string().min(1).optional(),
   localName: z.string().regex(/^[a-z0-9_]+$/).optional(),
   baseVoiceLocalName: z.string().min(1),
-  style: z.string().min(1).max(1000),
+  style: z.string().max(1000).optional(),
   previewText: z.string().min(1).max(4096),
   format: z.enum(['mp3', 'wav', 'pcm16']).default('wav'),
   sampleAudioBase64: z.string().optional(),
 });
+
+const styledVoiceSchema = styledVoiceBaseSchema.refine((data) => {
+  const text = data.previewText.trim();
+  return Boolean(data.style?.trim()) || /^[\(\[（][^)\]）]{1,100}[\)\]）]/.test(text);
+}, {
+  message: '请填写风格控制，或在预览文本开头使用整体风格标签',
+  path: ['style'],
+});
+
+function extractLeadingTagPrefix(text: string): string | undefined {
+  const trimmed = text.trim();
+  const match = trimmed.match(/^([\(\[（][^)\]）]{1,100}[\)\]）])/);
+  return match?.[1];
+}
 
 function buildSampleUrl(id: string) {
   return `/api/voices/${id}/sample`;
@@ -260,9 +274,15 @@ export async function voiceRoutes(fastify: FastifyInstance) {
     onRequest: [fastify.authenticate],
   }, async (request, reply) => {
     try {
-      const params = styledVoiceSchema.required({
+      const params = styledVoiceBaseSchema.required({
         displayName: true,
         localName: true,
+      }).refine((data) => {
+        const text = data.previewText.trim();
+        return Boolean(data.style?.trim()) || /^[\(\[（][^)\]）]{1,100}[\)\]）]/.test(text);
+      }, {
+        message: '请填写风格控制，或在预览文本开头使用整体风格标签',
+        path: ['style'],
       }).parse(request.body);
 
       const baseVoice = await voiceService.getByLocalName(params.baseVoiceLocalName);
@@ -296,6 +316,7 @@ export async function voiceRoutes(fastify: FastifyInstance) {
         baseVoiceLocalName: baseVoice.localName,
         baseProviderVoiceId: baseVoice.providerVoiceId || baseVoice.localName,
         style: params.style,
+        tagPrefix: extractLeadingTagPrefix(params.previewText),
         previewText: params.previewText,
         format: params.format,
         sampleAudio,

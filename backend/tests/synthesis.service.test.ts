@@ -114,4 +114,36 @@ describe('SynthesisService VoiceDesign templates', () => {
       })
     );
   });
+
+  it('prepends saved style tag prefix when synthesizing with an audio-tag-based styled entry', async () => {
+    const service = new SynthesisService();
+
+    await service.synthesizeWithVoice({
+      text: '欢迎回来，今晚继续读最后一章。',
+      voice: {
+        localName: 'moli_lazy',
+        providerVoiceId: '茉莉',
+        model: 'mimo-v2.5-tts',
+        type: 'styled',
+        configJson: JSON.stringify({
+          kind: 'style_preset',
+          baseVoiceLocalName: 'moli',
+          baseProviderVoiceId: '茉莉',
+          style: '',
+          tagPrefix: '(慵懒)',
+        }),
+      },
+      format: 'wav',
+    });
+
+    expect(providerMocks.synthesizeText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: '(慵懒)欢迎回来，今晚继续读最后一章。',
+        voice: '茉莉',
+        model: 'mimo-v2.5-tts',
+        format: 'wav',
+        style: undefined,
+      })
+    );
+  });
 });

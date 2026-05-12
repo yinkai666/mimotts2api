@@ -147,4 +147,45 @@ describe('VoiceDesignService', () => {
     });
     expect(voice.id).toBe('voice-2');
   });
+
+  it('stores a styled voice preset tag prefix when created from audio tag control', async () => {
+    prismaMock.voice.create.mockResolvedValue({
+      id: 'voice-3',
+      displayName: '茉莉慵懒',
+      localName: 'moli_lazy',
+      type: 'styled',
+      model: 'mimo-v2.5-tts',
+      providerVoiceId: '茉莉',
+      sampleFilePath: 'uploads-test/voice-samples/sample.wav',
+      configJson: '{}',
+    });
+
+    const service = new VoiceDesignService();
+
+    await service.saveStyledPreset({
+      displayName: '茉莉慵懒',
+      localName: 'moli_lazy',
+      baseVoiceLocalName: 'moli',
+      baseProviderVoiceId: '茉莉',
+      style: '',
+      tagPrefix: '(慵懒)',
+      previewText: '(慵懒)让我再睡五分钟……',
+      format: 'wav',
+      sampleAudio: Buffer.from('tag-audio'),
+    });
+
+    expect(prismaMock.voice.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        configJson: JSON.stringify({
+          kind: 'style_preset',
+          baseVoiceLocalName: 'moli',
+          baseProviderVoiceId: '茉莉',
+          style: '',
+          tagPrefix: '(慵懒)',
+          previewText: '(慵懒)让我再睡五分钟……',
+          format: 'wav',
+        }),
+      }),
+    });
+  });
 });

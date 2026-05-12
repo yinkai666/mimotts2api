@@ -22,7 +22,8 @@ export interface SaveStyledPresetParams {
   localName: string;
   baseVoiceLocalName: string;
   baseProviderVoiceId: string;
-  style: string;
+  style?: string;
+  tagPrefix?: string;
   previewText: string;
   format: 'mp3' | 'wav' | 'pcm16';
   sampleAudio: Buffer;
@@ -78,6 +79,7 @@ export class VoiceDesignService {
           baseVoiceLocalName: params.baseVoiceLocalName,
           baseProviderVoiceId: params.baseProviderVoiceId,
           style: params.style,
+          tagPrefix: params.tagPrefix,
           previewText: params.previewText,
           format: params.format,
         }),
