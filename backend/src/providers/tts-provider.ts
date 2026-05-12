@@ -1,11 +1,13 @@
 export interface SynthesizeParams {
   text: string;
-  voice: string;
+  voice?: string;
   model?: string;
   format?: 'mp3' | 'wav' | 'pcm16';
   style?: string;
   speed?: number;
   language?: string;
+  voiceDesignPrompt?: string;
+  optimizeTextPreview?: boolean;
 }
 
 export interface AudioResult {

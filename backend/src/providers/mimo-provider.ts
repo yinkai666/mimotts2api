@@ -76,13 +76,24 @@ export class MiMoProvider implements TTSProvider {
     }
 
     const startTime = Date.now();
+    const isVoiceDesign = params.model === 'mimo-v2.5-tts-voicedesign';
+
+    if (isVoiceDesign && !params.voiceDesignPrompt?.trim()) {
+      throw new Error('VoiceDesign requires a voice design prompt');
+    }
 
     try {
       // 构建消息
       const messages: Array<{ role: string; content: string }> = [];
 
-      // 如果有风格描述，添加到 user 消息
-      if (params.style) {
+      if (isVoiceDesign) {
+        messages.push({
+          role: 'user',
+          content: [params.voiceDesignPrompt!.trim(), params.style?.trim()]
+            .filter(Boolean)
+            .join('\n\n'),
+        });
+      } else if (params.style) {
         messages.push({
           role: 'user',
           content: params.style,
@@ -95,13 +106,22 @@ export class MiMoProvider implements TTSProvider {
         content: params.text,
       });
 
+      const audio: Record<string, any> = {
+        format: params.format || 'wav',
+      };
+
+      if (isVoiceDesign) {
+        if (params.optimizeTextPreview !== undefined) {
+          audio.optimize_text_preview = params.optimizeTextPreview;
+        }
+      } else {
+        audio.voice = params.voice;
+      }
+
       const requestBody = {
         model: params.model || 'mimo-v2.5-tts',
         messages,
-        audio: {
-          format: params.format || 'wav',
-          voice: params.voice,
-        },
+        audio,
       };
 
       logger.info({ voice: params.voice, textLength: params.text.length }, 'Synthesizing text');

@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { Voice } from '@prisma/client';
 import { MiMoProvider } from '../providers/mimo-provider';
 import { SynthesizeParams } from '../providers/tts-provider';
 
@@ -80,6 +81,55 @@ export class SynthesisService {
       });
 
       throw error;
+    }
+  }
+
+  async synthesizeWithVoice(params: {
+    text: string;
+    voice: Pick<Voice, 'localName' | 'providerVoiceId' | 'model' | 'type' | 'configJson'>;
+    model?: string;
+    format?: 'mp3' | 'wav' | 'pcm16';
+    style?: string;
+    speed?: number;
+    language?: string;
+    clientIp?: string;
+    userAgent?: string;
+  }) {
+    const voiceConfig = this.parseVoiceConfig(params.voice.configJson);
+    const isVoiceDesign = params.voice.model === 'mimo-v2.5-tts-voicedesign';
+
+    return this.synthesize({
+      text: params.text,
+      voice: isVoiceDesign ? undefined : params.voice.providerVoiceId || params.voice.localName,
+      model: params.model || params.voice.model,
+      format: params.format || 'mp3',
+      style: params.style || voiceConfig.style,
+      speed: params.speed,
+      language: params.language,
+      voiceLocalName: params.voice.localName,
+      clientIp: params.clientIp,
+      userAgent: params.userAgent,
+      voiceDesignPrompt: isVoiceDesign ? voiceConfig.voiceDesignPrompt : undefined,
+      optimizeTextPreview: isVoiceDesign ? voiceConfig.optimizeTextPreview : undefined,
+    });
+  }
+
+  private parseVoiceConfig(configJson?: string | null): {
+    voiceDesignPrompt?: string;
+    style?: string;
+    optimizeTextPreview?: boolean;
+  } {
+    if (!configJson) return {};
+
+    try {
+      const parsed = JSON.parse(configJson);
+      return {
+        voiceDesignPrompt: parsed.voiceDesignPrompt || parsed.description,
+        style: parsed.style,
+        optimizeTextPreview: parsed.optimizeTextPreview,
+      };
+    } catch {
+      return {};
     }
   }
 

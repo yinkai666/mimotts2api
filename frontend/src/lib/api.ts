@@ -79,6 +79,31 @@ export const voiceApi = {
     const { data } = await api.get('/api/voices/builtin');
     return data;
   },
+  previewCustom: async (params: {
+    description: string;
+    previewText: string;
+    style?: string;
+    format?: string;
+    optimizeTextPreview?: boolean;
+  }): Promise<Blob> => {
+    const { data } = await api.post('/api/voices/custom/preview', params, {
+      responseType: 'blob',
+    });
+    return data;
+  },
+  createCustom: async (params: {
+    displayName: string;
+    localName: string;
+    description: string;
+    previewText: string;
+    style?: string;
+    format?: string;
+    optimizeTextPreview?: boolean;
+    sampleAudioBase64?: string;
+  }): Promise<Voice & { sampleUrl?: string }> => {
+    const { data } = await api.post('/api/voices/custom', params);
+    return data;
+  },
 };
 
 // Synthesis API

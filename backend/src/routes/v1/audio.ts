@@ -81,15 +81,14 @@ export async function audioRoutes(fastify: FastifyInstance) {
       }
 
       // 4. 调用 MiMo Provider
-      const result = await synthesisService.synthesize({
+      const result = await synthesisService.synthesizeWithVoice({
         text,
-        voice: voice.providerVoiceId || params.voice,
-        model: params.model || voice.model,
+        voice,
+        model: params.model,
         format,
         style: params.style,
         speed: params.speed,
         language: params.language,
-        voiceLocalName: params.voice,
         clientIp: request.ip,
         userAgent: request.headers['user-agent'],
       });
@@ -172,14 +171,13 @@ export async function audioRoutes(fastify: FastifyInstance) {
       }
 
       // 合成
-      const result = await synthesisService.synthesize({
+      const result = await synthesisService.synthesizeWithVoice({
         text,
-        voice: voice.providerVoiceId || params.voice,
-        model: params.model || voice.model,
+        voice,
+        model: params.model,
         format,
         style: params.style,
         speed: params.speed,
-        voiceLocalName: params.voice,
         clientIp: request.ip,
         userAgent: request.headers['user-agent'],
       });

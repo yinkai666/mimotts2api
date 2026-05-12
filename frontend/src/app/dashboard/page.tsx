@@ -6,6 +6,22 @@ import { voiceApi, synthesisApi, settingsApi, authApi } from '@/lib/api';
 import { generateAiyuejiConfig, downloadBlob } from '@/lib/utils';
 import type { Voice, AppSetting } from '@/types';
 
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result;
+      if (typeof result !== 'string') {
+        reject(new Error('Failed to read audio sample'));
+        return;
+      }
+      resolve(result.split(',')[1] || '');
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('synthesize');
@@ -20,6 +36,24 @@ export default function DashboardPage() {
   const [style, setStyle] = useState('');
   const [audioUrl, setAudioUrl] = useState('');
   const [synthesizing, setSynthesizing] = useState(false);
+  const [voiceLibraryTab, setVoiceLibraryTab] = useState<'builtin' | 'custom' | 'cloned'>('builtin');
+  const [sampleAudioUrl, setSampleAudioUrl] = useState('');
+
+  // Voice design state
+  const [designForm, setDesignForm] = useState({
+    displayName: '',
+    localName: '',
+    description: '',
+    previewText: '',
+    style: '',
+    format: 'wav',
+    optimizeTextPreview: true,
+  });
+  const [designPreviewUrl, setDesignPreviewUrl] = useState('');
+  const [designPreviewBlob, setDesignPreviewBlob] = useState<Blob | null>(null);
+  const [previewingDesign, setPreviewingDesign] = useState(false);
+  const [savingDesign, setSavingDesign] = useState(false);
+  const [designMsg, setDesignMsg] = useState('');
 
   // Config generator state
   const [proxyUrl, setProxyUrl] = useState('');
@@ -66,6 +100,95 @@ export default function DashboardPage() {
   const handleDownload = () => {
     if (!audioUrl) return;
     fetch(audioUrl).then(r => r.blob()).then(b => downloadBlob(b, `tts_${Date.now()}.${format}`));
+  };
+
+  const handlePreviewDesign = async () => {
+    if (!designForm.description || !designForm.previewText) {
+      setDesignMsg('请填写音色描述和预览文本');
+      return;
+    }
+
+    setPreviewingDesign(true);
+    setDesignMsg('');
+    try {
+      const blob = await voiceApi.previewCustom({
+        description: designForm.description,
+        previewText: designForm.previewText,
+        style: designForm.style || undefined,
+        format: designForm.format,
+        optimizeTextPreview: designForm.optimizeTextPreview,
+      });
+      setDesignPreviewBlob(blob);
+      setDesignPreviewUrl(URL.createObjectURL(blob));
+      setDesignMsg('预览已生成，保存时会重新合成并保存为样例');
+    } catch (e: any) {
+      setDesignMsg('预览失败: ' + (e.response?.data?.error || e.message));
+    } finally {
+      setPreviewingDesign(false);
+    }
+  };
+
+  const handleSaveDesign = async () => {
+    if (!designForm.displayName || !designForm.localName || !designForm.description || !designForm.previewText) {
+      setDesignMsg('请完整填写显示名称、调用名称、音色描述和预览文本');
+      return;
+    }
+
+    if (!designPreviewBlob) {
+      setDesignMsg('请先合成一次预览，保存时会把最近一次预览作为样例');
+      return;
+    }
+
+    setSavingDesign(true);
+    setDesignMsg('');
+    try {
+      const sampleAudioBase64 = await blobToBase64(designPreviewBlob);
+      await voiceApi.createCustom({
+        displayName: designForm.displayName,
+        localName: designForm.localName,
+        description: designForm.description,
+        previewText: designForm.previewText,
+        style: designForm.style || undefined,
+        format: designForm.format,
+        optimizeTextPreview: designForm.optimizeTextPreview,
+        sampleAudioBase64,
+      });
+      setDesignMsg('设计音色已保存到音色库');
+      setDesignForm({
+        displayName: '',
+        localName: '',
+        description: '',
+        previewText: '',
+        style: '',
+        format: 'wav',
+        optimizeTextPreview: true,
+      });
+      setDesignPreviewBlob(null);
+      setDesignPreviewUrl('');
+      const freshVoices = await voiceApi.getAll();
+      setVoices(freshVoices);
+      setVoiceLibraryTab('custom');
+      setActiveTab('voices');
+    } catch (e: any) {
+      setDesignMsg('保存失败: ' + (e.response?.data?.error || e.message));
+    } finally {
+      setSavingDesign(false);
+    }
+  };
+
+  const playVoiceSample = async (voice: Voice) => {
+    if (!voice.sampleFilePath) return;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/voices/${voice.id}/sample`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (!response.ok) throw new Error('sample request failed');
+      const blob = await response.blob();
+      setSampleAudioUrl(URL.createObjectURL(blob));
+    } catch (e: any) {
+      alert('样例音频播放失败');
+    }
   };
 
   const handleGenerateConfig = () => {
@@ -158,6 +281,7 @@ export default function DashboardPage() {
           <nav className="-mb-px flex space-x-8">
             {[
               { id: 'synthesize', name: '语音合成' },
+              { id: 'design', name: '设计音色' },
               { id: 'voices', name: '音色库' },
               { id: 'config', name: '配置生成器' },
               { id: 'settings', name: '设置' },
@@ -218,10 +342,138 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* ========== 设计音色 ========== */}
+          {activeTab === 'design' && (
+            <div className="space-y-6">
+              <div className="flex flex-col gap-1">
+                <h2 className="text-xl font-semibold">设计音色</h2>
+                <p className="text-sm text-gray-500">用一段音色描述生成可复用的本地音色名称，保存后可在语音合成和爱阅记接口中直接调用。</p>
+              </div>
+
+              {designMsg && (
+                <div className={`px-4 py-3 rounded ${designMsg.includes('失败') ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700'}`}>{designMsg}</div>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">显示名称</label>
+                      <input type="text" value={designForm.displayName}
+                        onChange={e => setDesignForm({ ...designForm, displayName: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="睡前故事女声" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">调用名称</label>
+                      <input type="text" value={designForm.localName}
+                        onChange={e => setDesignForm({ ...designForm, localName: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_') })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="bedtime_voice" />
+                      <p className="text-xs text-gray-400 mt-1">仅支持小写字母、数字和下划线</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">音色描述</label>
+                    <textarea value={designForm.description}
+                      onChange={e => setDesignForm({ ...designForm, description: e.target.value })} rows={5}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="例如：温柔的年轻女性，声音清澈柔和，语速偏慢，适合睡前故事和安静旁白。" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">预览文本</label>
+                    <textarea value={designForm.previewText}
+                      onChange={e => setDesignForm({ ...designForm, previewText: e.target.value })} rows={4}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="输入用于调试和保存样例的文本..." />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">风格控制（可选）</label>
+                    <textarea value={designForm.style}
+                      onChange={e => setDesignForm({ ...designForm, style: e.target.value })} rows={4}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="例如：低声、放松、带一点气声；句尾自然放缓。" />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">样例格式</label>
+                      <select value={designForm.format}
+                        onChange={e => setDesignForm({ ...designForm, format: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="wav">WAV</option>
+                        <option value="mp3">MP3</option>
+                      </select>
+                    </div>
+                    <label className="flex items-center gap-2 mt-7 text-sm text-gray-700">
+                      <input type="checkbox" checked={designForm.optimizeTextPreview}
+                        onChange={e => setDesignForm({ ...designForm, optimizeTextPreview: e.target.checked })}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                      智能润色预览文本
+                    </label>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    <button onClick={handlePreviewDesign}
+                      disabled={previewingDesign || !designForm.description || !designForm.previewText}
+                      className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+                      {previewingDesign ? '合成中...' : '合成预览'}
+                    </button>
+                    <button onClick={handleSaveDesign}
+                      disabled={savingDesign || !designPreviewBlob || !designForm.displayName || !designForm.localName || !designForm.description || !designForm.previewText}
+                      className="px-6 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 disabled:opacity-50">
+                      {savingDesign ? '保存中...' : '保存到音色库'}
+                    </button>
+                    {designPreviewBlob && (
+                      <button onClick={() => downloadBlob(designPreviewBlob, `voice_design_preview.${designForm.format}`)}
+                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">下载预览</button>
+                    )}
+                  </div>
+
+                  {designPreviewUrl && (
+                    <div className="border rounded-lg p-4 space-y-3">
+                      <h3 className="text-sm font-medium text-gray-700">最近一次预览</h3>
+                      <audio controls src={designPreviewUrl} className="w-full" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ========== 音色库 ========== */}
           {activeTab === 'voices' && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold">音色库</h2>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between gap-4">
+                  <h2 className="text-xl font-semibold">音色库</h2>
+                  <button onClick={() => setActiveTab('design')}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">新增设计音色</button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { id: 'builtin', name: '自带音色' },
+                    { id: 'custom', name: '设计音色' },
+                    { id: 'cloned', name: '复刻音色' },
+                  ].map(t => (
+                    <button key={t.id} onClick={() => setVoiceLibraryTab(t.id as 'builtin' | 'custom' | 'cloned')}
+                      className={`${voiceLibraryTab === t.id ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} px-3 py-2 rounded-md text-sm`}>
+                      {t.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {sampleAudioUrl && (
+                <div className="border rounded-lg p-4 space-y-2">
+                  <h3 className="text-sm font-medium text-gray-700">样例音频</h3>
+                  <audio controls src={sampleAudioUrl} className="w-full" />
+                </div>
+              )}
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -230,17 +482,30 @@ export default function DashboardPage() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">本地名称</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">类型</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">模型</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">样例</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {voices.map(v => (
+                    {voices.filter(v => v.type === voiceLibraryTab).map(v => (
                       <tr key={v.id}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{v.displayName}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{v.localName}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{v.type}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{v.model}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {v.sampleFilePath ? (
+                            <button onClick={() => playVoiceSample(v)} className="text-blue-600 hover:text-blue-800">播放样例</button>
+                          ) : (
+                            <span className="text-gray-400">无</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
+                    {voices.filter(v => v.type === voiceLibraryTab).length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-8 text-sm text-gray-500 text-center">暂无音色</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>

@@ -28,14 +28,13 @@ export async function synthesizeRoutes(fastify: FastifyInstance) {
       }
 
       // 调用合成服务
-      const result = await synthesisService.synthesize({
+      const result = await synthesisService.synthesizeWithVoice({
         text: params.text,
-        voice: voice.providerVoiceId || params.voice,
-        model: params.model || voice.model,
+        voice,
+        model: params.model,
         format: params.format || 'mp3',
         style: params.style,
         speed: params.speed,
-        voiceLocalName: params.voice,
         clientIp: request.ip,
         userAgent: request.headers['user-agent'],
       });
