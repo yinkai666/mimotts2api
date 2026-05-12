@@ -95,6 +95,14 @@ export class AuthService {
 
     return { authorized: true };
   }
+
+  async getProxyToken(): Promise<string> {
+    const setting = await prisma.appSetting.findUnique({
+      where: { key: 'proxy_auth_token' },
+    });
+
+    return setting?.value || '';
+  }
 }
 
 export const authService = new AuthService();

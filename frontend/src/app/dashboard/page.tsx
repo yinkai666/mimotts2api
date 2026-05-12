@@ -59,6 +59,8 @@ export default function DashboardPage() {
   const [proxyUrl, setProxyUrl] = useState('');
   const [proxyToken, setProxyToken] = useState('');
   const [generatedConfig, setGeneratedConfig] = useState('');
+  const [currentProxyToken, setCurrentProxyToken] = useState('');
+  const [showCurrentProxyToken, setShowCurrentProxyToken] = useState(false);
 
   // Settings edit state
   const [editSettings, setEditSettings] = useState<Record<string, string>>({});
@@ -76,9 +78,15 @@ export default function DashboardPage() {
 
   const loadData = async () => {
     try {
-      const [voicesData, settingsData] = await Promise.all([voiceApi.getAll(), settingsApi.getAll()]);
+      const [voicesData, settingsData, proxyTokenData] = await Promise.all([
+        voiceApi.getAll(),
+        settingsApi.getAll(),
+        settingsApi.getProxyToken(),
+      ]);
       setVoices(voicesData);
       setSettings(settingsData);
+      setCurrentProxyToken(proxyTokenData.token || '');
+      setProxyToken(proxyTokenData.token || '');
       if (voicesData.length > 0) setSelectedVoice(voicesData[0].localName);
       const edit: Record<string, string> = {};
       settingsData.forEach((s) => { edit[s.key] = s.masked ? '' : s.value; });
@@ -214,6 +222,9 @@ export default function DashboardPage() {
     try {
       const r = await settingsApi.regenerateToken();
       setEditSettings({ ...editSettings, proxy_auth_token: r.token });
+      setCurrentProxyToken(r.token);
+      setProxyToken(r.token);
+      setShowCurrentProxyToken(true);
       setSettingsMsg('Token 已重新生成，请点击保存');
     } catch (e: any) { alert('操作失败'); }
   };
@@ -222,6 +233,9 @@ export default function DashboardPage() {
     try {
       await settingsApi.clearToken();
       setEditSettings({ ...editSettings, proxy_auth_token: '' });
+      setCurrentProxyToken('');
+      setProxyToken('');
+      setShowCurrentProxyToken(false);
       setSettingsMsg('Token 已清除，API 不再需要鉴权');
       const fresh = await settingsApi.getAll(); setSettings(fresh);
     } catch (e: any) { alert('操作失败'); }
@@ -545,6 +559,24 @@ export default function DashboardPage() {
                     placeholder="留空则不生成 Authorization 头" />
                   <p className="text-xs text-gray-400 mt-1">如果服务器未设置 Token，请留空</p>
                 </div>
+                {currentProxyToken && (
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-sm font-medium text-gray-700">当前后台 Token</h3>
+                      <div className="flex gap-2">
+                        <button onClick={() => setProxyToken(currentProxyToken)}
+                          className="px-3 py-2 text-sm bg-white text-gray-700 rounded-md hover:bg-gray-100 border border-gray-200">带入配置生成器</button>
+                        <button onClick={() => setShowCurrentProxyToken(v => !v)}
+                          className="px-3 py-2 text-sm bg-white text-gray-700 rounded-md hover:bg-gray-100 border border-gray-200">{showCurrentProxyToken ? '隐藏' : '显示'}</button>
+                        <button onClick={() => { navigator.clipboard.writeText(currentProxyToken); alert('Token 已复制到剪贴板'); }}
+                          className="px-3 py-2 text-sm bg-white text-gray-700 rounded-md hover:bg-gray-100 border border-gray-200">复制</button>
+                      </div>
+                    </div>
+                    <div className="font-mono text-sm text-gray-700 break-all">
+                      {showCurrentProxyToken ? currentProxyToken : '••••••••••••••••••••••••••••••••'}
+                    </div>
+                  </div>
+                )}
               </div>
               <button onClick={handleGenerateConfig} className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">生成配置</button>
               {generatedConfig && (
@@ -645,6 +677,20 @@ export default function DashboardPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     placeholder="自定义 Token 字符串" />
                 </div>
+                {currentProxyToken && (
+                  <div className="rounded-md bg-gray-50 border border-gray-200 p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-medium text-gray-700">当前生效 Token</span>
+                      <div className="flex gap-2">
+                        <button onClick={() => setShowCurrentProxyToken(v => !v)} className="px-2 py-1 text-xs bg-white border border-gray-200 rounded hover:bg-gray-100">{showCurrentProxyToken ? '隐藏' : '显示'}</button>
+                        <button onClick={() => { navigator.clipboard.writeText(currentProxyToken); alert('Token 已复制到剪贴板'); }} className="px-2 py-1 text-xs bg-white border border-gray-200 rounded hover:bg-gray-100">复制</button>
+                      </div>
+                    </div>
+                    <div className="font-mono text-xs text-gray-700 break-all">
+                      {showCurrentProxyToken ? currentProxyToken : '••••••••••••••••••••••••••••••••'}
+                    </div>
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <button onClick={handleRegenToken} className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">随机生成 Token</button>
                   <button onClick={handleClearToken} className="px-3 py-2 text-sm bg-red-50 text-red-600 rounded-md hover:bg-red-100">清除 Token</button>

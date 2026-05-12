@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { maskApiKey, generateToken } from '../utils/crypto';
 import { synthesisService } from '../services/synthesis.service';
+import { authService } from '../services/auth.service';
 
 const prisma = new PrismaClient();
 
@@ -119,6 +120,21 @@ export async function settingsRoutes(fastify: FastifyInstance) {
       });
 
       return { message: 'Proxy token cleared. API access no longer requires authentication.' };
+    } catch (error: any) {
+      return reply.status(500).send({ error: error.message });
+    }
+  });
+
+  // 获取当前代理 Token 明文（仅后台管理员会话）
+  fastify.get('/api/settings/proxy-token', {
+    onRequest: [fastify.authenticate],
+  }, async (request, reply) => {
+    try {
+      const token = await authService.getProxyToken();
+      return {
+        token,
+        configured: !!token,
+      };
     } catch (error: any) {
       return reply.status(500).send({ error: error.message });
     }
