@@ -1,5 +1,13 @@
 import axios from 'axios';
-import type { User, Voice, SynthesisLog, AppSetting } from '@/types';
+import type {
+  User,
+  Voice,
+  SynthesisLog,
+  AppSetting,
+  LogStats,
+  TimeseriesResponse,
+  ErrorDistributionResponse,
+} from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -146,21 +154,34 @@ export const synthesisApi = {
   },
   getLogs: async (filters?: {
     success?: boolean;
+    endpoint?: string;
+    errorCode?: string;
     startDate?: string;
     endDate?: string;
     limit?: number;
     offset?: number;
   }): Promise<{ logs: SynthesisLog[]; total: number }> => {
-    const { data } = await api.get('/api/logs', { params: filters });
+    const params: Record<string, any> = {};
+    if (filters?.success !== undefined) params.success = String(filters.success);
+    if (filters?.endpoint) params.endpoint = filters.endpoint;
+    if (filters?.errorCode) params.errorCode = filters.errorCode;
+    if (filters?.startDate) params.startDate = filters.startDate;
+    if (filters?.endDate) params.endDate = filters.endDate;
+    if (filters?.limit !== undefined) params.limit = filters.limit;
+    if (filters?.offset !== undefined) params.offset = filters.offset;
+    const { data } = await api.get('/api/logs', { params });
     return data;
   },
-  getStats: async (): Promise<{
-    total: number;
-    successful: number;
-    failed: number;
-    successRate: number;
-  }> => {
+  getStats: async (): Promise<LogStats> => {
     const { data } = await api.get('/api/logs/stats');
+    return data;
+  },
+  getTimeseries: async (range: 'hour' | 'day' = 'hour'): Promise<TimeseriesResponse> => {
+    const { data } = await api.get('/api/logs/timeseries', { params: { range } });
+    return data;
+  },
+  getErrors: async (range: 'hour' | 'day' | 'all' = 'day'): Promise<ErrorDistributionResponse> => {
+    const { data } = await api.get('/api/logs/errors', { params: { range } });
     return data;
   },
 };

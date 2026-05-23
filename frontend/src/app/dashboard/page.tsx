@@ -1,10 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { voiceApi, synthesisApi, settingsApi, authApi } from '@/lib/api';
 import { generateAiyuejiConfig, downloadBlob, buildMimoCurlPreview } from '@/lib/utils';
-import type { Voice, AppSetting } from '@/types';
+import type {
+  Voice,
+  AppSetting,
+  SynthesisLog,
+  LogStats,
+  TimeseriesResponse,
+  ErrorDistributionResponse,
+} from '@/types';
 
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -24,6 +31,113 @@ function blobToBase64(blob: Blob): Promise<string> {
 
 function hasLeadingStyleTag(text: string): boolean {
   return /^[\(\[（][^)\]）]{1,100}[\)\]）]/.test(text.trim());
+}
+
+function StatCard({
+  label,
+  value,
+  hint,
+  tone = 'neutral',
+}: {
+  label: string;
+  value: string | number;
+  hint?: string;
+  tone?: 'neutral' | 'ok' | 'warn';
+}) {
+  const toneClass =
+    tone === 'warn' ? 'text-amber-600' : tone === 'ok' ? 'text-green-600' : 'text-gray-500';
+  return (
+    <div className="border rounded-lg p-4 bg-white">
+      <div className="text-xs text-gray-500 mb-1">{label}</div>
+      <div className="text-2xl font-semibold text-gray-900">{value}</div>
+      {hint && <div className={`text-xs mt-1 ${toneClass}`}>{hint}</div>}
+    </div>
+  );
+}
+
+function RpmChart({ data }: { data: TimeseriesResponse | null }) {
+  if (!data || data.buckets.length === 0) {
+    return <div className="text-sm text-gray-400 py-12 text-center">暂无数据</div>;
+  }
+
+  const W = 800;
+  const H = 180;
+  const padL = 32;
+  const padR = 8;
+  const padT = 10;
+  const padB = 22;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+  const buckets = data.buckets;
+  const maxTotal = Math.max(1, ...buckets.map((b) => b.total));
+  const barW = innerW / buckets.length;
+  const isHour = data.range === 'hour';
+
+  const yTicks = [0, 0.5, 1].map((r) => ({
+    v: Math.round(maxTotal * r),
+    y: padT + innerH - innerH * r,
+  }));
+
+  const labelEvery = isHour ? 10 : 24;
+
+  return (
+    <div className="w-full overflow-x-auto">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-44" preserveAspectRatio="none">
+        {yTicks.map((t, i) => (
+          <g key={i}>
+            <line x1={padL} y1={t.y} x2={W - padR} y2={t.y} stroke="#e5e7eb" strokeDasharray="3 3" />
+            <text x={padL - 4} y={t.y + 3} fontSize="10" textAnchor="end" fill="#9ca3af">{t.v}</text>
+          </g>
+        ))}
+        {buckets.map((b, i) => {
+          const x = padL + i * barW;
+          const successH = (b.success / maxTotal) * innerH;
+          const failedH = (b.failed / maxTotal) * innerH;
+          return (
+            <g key={i}>
+              {failedH > 0 && (
+                <rect
+                  x={x + 0.5}
+                  y={padT + innerH - successH - failedH}
+                  width={Math.max(0.5, barW - 1)}
+                  height={failedH}
+                  fill="#ef4444"
+                >
+                  <title>
+                    {new Date(b.time).toLocaleString('zh-CN', { hour12: false })} 失败 {b.failed}
+                  </title>
+                </rect>
+              )}
+              {successH > 0 && (
+                <rect
+                  x={x + 0.5}
+                  y={padT + innerH - successH}
+                  width={Math.max(0.5, barW - 1)}
+                  height={successH}
+                  fill="#3b82f6"
+                >
+                  <title>
+                    {new Date(b.time).toLocaleString('zh-CN', { hour12: false })} 成功 {b.success}
+                  </title>
+                </rect>
+              )}
+              {i % labelEvery === 0 && (
+                <text x={x + barW / 2} y={H - padB + 14} fontSize="10" textAnchor="middle" fill="#6b7280">
+                  {isHour
+                    ? new Date(b.time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
+                    : new Date(b.time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+      <div className="flex justify-end gap-4 text-xs text-gray-500 pt-1">
+        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 bg-blue-500 rounded-sm" /> 成功</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 bg-red-500 rounded-sm" /> 失败</span>
+      </div>
+    </div>
+  );
 }
 
 export default function DashboardPage() {
@@ -93,6 +207,25 @@ export default function DashboardPage() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordMsg, setPasswordMsg] = useState('');
 
+  // Logs state
+  const [logStats, setLogStats] = useState<LogStats | null>(null);
+  const [logTimeseries, setLogTimeseries] = useState<TimeseriesResponse | null>(null);
+  const [logErrors, setLogErrors] = useState<ErrorDistributionResponse | null>(null);
+  const [logList, setLogList] = useState<SynthesisLog[]>([]);
+  const [logTotal, setLogTotal] = useState(0);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [tsRange, setTsRange] = useState<'hour' | 'day'>('hour');
+  const [errRange, setErrRange] = useState<'hour' | 'day' | 'all'>('day');
+  const [logFilters, setLogFilters] = useState<{
+    success: '' | 'true' | 'false';
+    endpoint: string;
+    errorCode: string;
+  }>({ success: '', endpoint: '', errorCode: '' });
+  const [logPage, setLogPage] = useState(0);
+  const [logPageSize] = useState(20);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const logsRefreshTimer = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
@@ -117,6 +250,54 @@ export default function DashboardPage() {
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
+
+  const loadLogs = useCallback(async () => {
+    setLogsLoading(true);
+    try {
+      const filters: Parameters<typeof synthesisApi.getLogs>[0] = {
+        limit: logPageSize,
+        offset: logPage * logPageSize,
+      };
+      if (logFilters.success !== '') filters.success = logFilters.success === 'true';
+      if (logFilters.endpoint) filters.endpoint = logFilters.endpoint;
+      if (logFilters.errorCode) filters.errorCode = logFilters.errorCode;
+
+      const [stats, ts, errors, logs] = await Promise.all([
+        synthesisApi.getStats(),
+        synthesisApi.getTimeseries(tsRange),
+        synthesisApi.getErrors(errRange),
+        synthesisApi.getLogs(filters),
+      ]);
+      setLogStats(stats);
+      setLogTimeseries(ts);
+      setLogErrors(errors);
+      setLogList(logs.logs);
+      setLogTotal(logs.total);
+    } catch (e) { console.error(e); }
+    finally { setLogsLoading(false); }
+  }, [tsRange, errRange, logFilters, logPage, logPageSize]);
+
+  useEffect(() => {
+    if (activeTab !== 'logs') return;
+    loadLogs();
+  }, [activeTab, loadLogs]);
+
+  useEffect(() => {
+    if (activeTab !== 'logs' || !autoRefresh) {
+      if (logsRefreshTimer.current) {
+        clearInterval(logsRefreshTimer.current);
+        logsRefreshTimer.current = null;
+      }
+      return;
+    }
+    logsRefreshTimer.current = setInterval(() => { loadLogs(); }, 10000);
+    return () => {
+      if (logsRefreshTimer.current) {
+        clearInterval(logsRefreshTimer.current);
+        logsRefreshTimer.current = null;
+      }
+    };
+  }, [activeTab, autoRefresh, loadLogs]);
 
   const handleSynthesize = async () => {
     if (!text || !selectedVoice) return;
@@ -413,6 +594,7 @@ export default function DashboardPage() {
               { id: 'design', name: '设计音色' },
               { id: 'voices', name: '音色库' },
               { id: 'config', name: '配置生成器' },
+              { id: 'logs', name: '调用日志' },
               { id: 'settings', name: '设置' },
             ].map(t => (
               <button key={t.id} onClick={() => setActiveTab(t.id)}
@@ -827,6 +1009,202 @@ export default function DashboardPage() {
                   <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-x-auto text-sm">{generatedConfig}</pre>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ========== 调用日志 ========== */}
+          {activeTab === 'logs' && (
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-semibold">调用日志</h2>
+                  <p className="text-sm text-gray-500">记录所有合成调用的成功/失败、耗时、错误代码和客户端信息。</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="checkbox" checked={autoRefresh} onChange={e => setAutoRefresh(e.target.checked)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                    自动刷新 (10s)
+                  </label>
+                  <button onClick={() => loadLogs()} disabled={logsLoading}
+                    className="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+                    {logsLoading ? '刷新中...' : '刷新'}
+                  </button>
+                </div>
+              </div>
+
+              {/* 总览卡片 */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <StatCard label="总调用数" value={logStats?.total ?? '—'} hint={`成功 ${logStats?.successful ?? 0} · 失败 ${logStats?.failed ?? 0}`} />
+                <StatCard
+                  label="成功率"
+                  value={logStats ? `${logStats.successRate.toFixed(1)}%` : '—'}
+                  hint={logStats && logStats.successRate < 95 ? '低于 95%，建议关注错误分布' : '运行良好'}
+                  tone={logStats && logStats.successRate < 95 ? 'warn' : 'ok'}
+                />
+                <StatCard label="近 1 分钟 RPM" value={logStats?.rpm ?? '—'} hint={`近 1 小时 ${logStats?.requestsLastHour ?? 0} 次`} />
+                <StatCard
+                  label="近 24 小时调用"
+                  value={logStats?.requestsLast24h ?? '—'}
+                  hint={`其中失败 ${logStats?.failedLast24h ?? 0} · 平均 ${logStats ? Math.round(logStats.avgDurationMs) : 0} ms`}
+                  tone={logStats && logStats.failedLast24h > 0 ? 'warn' : 'ok'}
+                />
+              </div>
+
+              {/* RPM 时序图 */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-medium text-gray-700">请求频率时序图</h3>
+                  <div className="flex gap-2">
+                    {([
+                      { id: 'hour', name: '最近 1 小时（按分钟）' },
+                      { id: 'day', name: '最近 24 小时（10 分钟一格）' },
+                    ] as const).map(t => (
+                      <button key={t.id} onClick={() => setTsRange(t.id)}
+                        className={`${tsRange === t.id ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} px-3 py-1.5 rounded-md text-xs`}>
+                        {t.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <RpmChart data={logTimeseries} />
+              </div>
+
+              {/* 错误分布 */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-medium text-gray-700">错误分布</h3>
+                  <div className="flex gap-2">
+                    {([
+                      { id: 'hour', name: '近 1 小时' },
+                      { id: 'day', name: '近 24 小时' },
+                      { id: 'all', name: '全部' },
+                    ] as const).map(t => (
+                      <button key={t.id} onClick={() => setErrRange(t.id)}
+                        className={`${errRange === t.id ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} px-3 py-1.5 rounded-md text-xs`}>
+                        {t.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {logErrors && logErrors.items.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">错误代码</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">HTTP 状态</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">次数</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">占比</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {(() => {
+                          const total = logErrors.items.reduce((s, it) => s + it.count, 0);
+                          return logErrors.items.map((it, idx) => (
+                            <tr key={idx}>
+                              <td className="px-4 py-2 text-sm font-mono text-gray-900">{it.errorCode}</td>
+                              <td className="px-4 py-2 text-sm text-gray-600">{it.statusCode ?? '—'}</td>
+                              <td className="px-4 py-2 text-sm text-gray-900">{it.count}</td>
+                              <td className="px-4 py-2 text-sm text-gray-500">
+                                {total > 0 ? `${((it.count / total) * 100).toFixed(1)}%` : '—'}
+                              </td>
+                              <td className="px-4 py-2 text-sm">
+                                <button onClick={() => { setLogFilters({ success: 'false', endpoint: '', errorCode: it.errorCode }); setLogPage(0); }}
+                                  className="text-blue-600 hover:text-blue-800">查看明细</button>
+                              </td>
+                            </tr>
+                          ));
+                        })()}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400">所选时段内没有错误记录。</p>
+                )}
+              </div>
+
+              {/* 日志明细 */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="text-sm font-medium text-gray-700">日志明细（共 {logTotal} 条）</h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select value={logFilters.success}
+                      onChange={e => { setLogFilters({ ...logFilters, success: e.target.value as '' | 'true' | 'false' }); setLogPage(0); }}
+                      className="px-2 py-1.5 text-sm border border-gray-300 rounded-md">
+                      <option value="">全部状态</option>
+                      <option value="true">仅成功</option>
+                      <option value="false">仅失败</option>
+                    </select>
+                    <select value={logFilters.endpoint}
+                      onChange={e => { setLogFilters({ ...logFilters, endpoint: e.target.value }); setLogPage(0); }}
+                      className="px-2 py-1.5 text-sm border border-gray-300 rounded-md">
+                      <option value="">全部接口</option>
+                      <option value="/v1/audio/speech">/v1/audio/speech</option>
+                      <option value="/api/synthesize">/api/synthesize</option>
+                    </select>
+                    <input type="text" value={logFilters.errorCode}
+                      onChange={e => { setLogFilters({ ...logFilters, errorCode: e.target.value }); setLogPage(0); }}
+                      placeholder="按错误代码筛选"
+                      className="px-2 py-1.5 text-sm border border-gray-300 rounded-md w-44" />
+                    {(logFilters.success || logFilters.endpoint || logFilters.errorCode) && (
+                      <button onClick={() => { setLogFilters({ success: '', endpoint: '', errorCode: '' }); setLogPage(0); }}
+                        className="px-2 py-1.5 text-sm text-gray-600 hover:text-gray-900">清除筛选</button>
+                    )}
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">时间</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">接口</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">音色</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">文本</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">状态</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">错误代码</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">耗时</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">IP</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {logList.map(l => (
+                        <tr key={l.id} className={l.success ? '' : 'bg-red-50/30'}>
+                          <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{new Date(l.createdAt).toLocaleString('zh-CN', { hour12: false })}</td>
+                          <td className="px-3 py-2 text-xs font-mono text-gray-600 whitespace-nowrap">{l.endpoint || '—'}</td>
+                          <td className="px-3 py-2 text-xs text-gray-700 whitespace-nowrap">{l.voiceLocalName || '—'}</td>
+                          <td className="px-3 py-2 text-xs text-gray-600 max-w-xs truncate" title={l.inputText}>{l.inputText || <span className="text-gray-300">（空）</span>}</td>
+                          <td className="px-3 py-2 text-xs whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${l.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                              {l.success ? `成功 ${l.statusCode ?? 200}` : `失败 ${l.statusCode ?? ''}`}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-xs font-mono text-gray-700 whitespace-nowrap" title={l.errorMessage || ''}>
+                            {l.errorCode || (l.success ? '—' : 'unknown')}
+                          </td>
+                          <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{l.durationMs != null ? `${l.durationMs} ms` : '—'}</td>
+                          <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{l.clientIp || '—'}</td>
+                        </tr>
+                      ))}
+                      {logList.length === 0 && (
+                        <tr>
+                          <td colSpan={8} className="px-3 py-8 text-center text-sm text-gray-500">{logsLoading ? '加载中...' : '没有匹配的日志'}</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-xs text-gray-500">第 {logPage + 1} / {Math.max(1, Math.ceil(logTotal / logPageSize))} 页</span>
+                  <div className="flex gap-2">
+                    <button onClick={() => setLogPage(p => Math.max(0, p - 1))} disabled={logPage === 0}
+                      className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:opacity-50">上一页</button>
+                    <button onClick={() => setLogPage(p => p + 1)} disabled={(logPage + 1) * logPageSize >= logTotal}
+                      className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:opacity-50">下一页</button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

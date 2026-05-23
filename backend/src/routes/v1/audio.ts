@@ -7,6 +7,8 @@ import { extractBearerToken } from '../../middleware/auth';
 import { getAudioMimeType } from '../../utils/audio';
 import { rateLimit } from '../../middleware/rate-limit';
 
+const ENDPOINT = '/v1/audio/speech';
+
 const speechSchema = z.object({
   input: z.string().min(1).max(4096).optional(),
   text: z.string().min(1).max(4096).optional(),
@@ -55,25 +57,51 @@ export async function audioRoutes(fastify: FastifyInstance) {
     onRequest: [rateLimit],
   }, async (request, reply) => {
     const startTime = Date.now();
+    let parsed: z.infer<typeof speechSchema> | null = null;
 
     try {
       // 1. 验证代理 Token（可选）
       const authResult = await checkProxyAuth(request);
       if (!authResult.authorized) {
+        const errorCode = authResult.reason || 'invalid_token';
+        await synthesisService.logFailedRequest({
+          endpoint: ENDPOINT,
+          statusCode: 401,
+          errorCode,
+          errorMessage: errorCode === 'missing_token' ? 'Missing authorization token' : 'Invalid authorization token',
+          clientIp: request.ip,
+          userAgent: request.headers['user-agent'],
+          durationMs: Date.now() - startTime,
+        });
         return reply.status(401).send(buildAuthError(authResult.reason!));
       }
 
       // 2. 解析参数
-      const params = speechSchema.parse(request.body);
-      const text = params.input || params.text!;
-      const format = params.response_format || 'mp3';
+      parsed = speechSchema.parse(request.body);
+      const text = parsed.input || parsed.text!;
+      const format = parsed.response_format || 'mp3';
 
       // 3. 查询音色配置
-      const voice = await voiceService.getByLocalName(params.voice);
+      const voice = await voiceService.getByLocalName(parsed.voice);
       if (!voice) {
+        await synthesisService.logFailedRequest({
+          endpoint: ENDPOINT,
+          statusCode: 404,
+          errorCode: 'voice_not_found',
+          errorMessage: `Voice not found: ${parsed.voice}`,
+          voiceLocalName: parsed.voice,
+          model: parsed.model,
+          inputText: text,
+          format,
+          style: parsed.style,
+          speed: parsed.speed,
+          clientIp: request.ip,
+          userAgent: request.headers['user-agent'],
+          durationMs: Date.now() - startTime,
+        });
         return reply.status(404).send({
           error: {
-            message: `Voice not found: ${params.voice}`,
+            message: `Voice not found: ${parsed.voice}`,
             type: 'invalid_request_error',
             code: 'voice_not_found',
           },
@@ -84,13 +112,14 @@ export async function audioRoutes(fastify: FastifyInstance) {
       const result = await synthesisService.synthesizeWithVoice({
         text,
         voice,
-        model: params.model,
+        model: parsed.model,
         format,
-        style: params.style,
-        speed: params.speed,
-        language: params.language,
+        style: parsed.style,
+        speed: parsed.speed,
+        language: parsed.language,
         clientIp: request.ip,
         userAgent: request.headers['user-agent'],
+        endpoint: ENDPOINT,
       });
 
       // 5. 返回纯音频二进制
@@ -102,7 +131,7 @@ export async function audioRoutes(fastify: FastifyInstance) {
         .send(result.audioData);
 
       fastify.log.info({
-        voice: params.voice,
+        voice: parsed.voice,
         textLength: text.length,
         audioSize: result.audioData.length,
         durationMs: Date.now() - startTime,
@@ -112,6 +141,16 @@ export async function audioRoutes(fastify: FastifyInstance) {
       fastify.log.error({ error: error.message }, 'Audio speech failed');
 
       if (error instanceof z.ZodError) {
+        await synthesisService.logFailedRequest({
+          endpoint: ENDPOINT,
+          statusCode: 400,
+          errorCode: 'invalid_parameters',
+          errorMessage: error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; '),
+          inputText: (request.body as any)?.input || (request.body as any)?.text,
+          clientIp: request.ip,
+          userAgent: request.headers['user-agent'],
+          durationMs: Date.now() - startTime,
+        });
         return reply.status(400).send({
           error: {
             message: 'Invalid request parameters',
@@ -136,16 +175,29 @@ export async function audioRoutes(fastify: FastifyInstance) {
   fastify.get('/v1/audio/speech', {
     onRequest: [rateLimit],
   }, async (request, reply) => {
+    const startTime = Date.now();
+    let parsed: z.infer<typeof speechSchema> | null = null;
+
     try {
       // 验证 Token（可选）
       const authResult = await checkProxyAuth(request);
       if (!authResult.authorized) {
+        const errorCode = authResult.reason || 'invalid_token';
+        await synthesisService.logFailedRequest({
+          endpoint: ENDPOINT,
+          statusCode: 401,
+          errorCode,
+          errorMessage: errorCode === 'missing_token' ? 'Missing authorization token' : 'Invalid authorization token',
+          clientIp: request.ip,
+          userAgent: request.headers['user-agent'],
+          durationMs: Date.now() - startTime,
+        });
         return reply.status(401).send(buildAuthError(authResult.reason!));
       }
 
       // 从 query 参数解析
       const query = request.query as any;
-      const params = speechSchema.parse({
+      parsed = speechSchema.parse({
         input: query.input || query.text,
         voice: query.voice,
         model: query.model,
@@ -155,15 +207,30 @@ export async function audioRoutes(fastify: FastifyInstance) {
         language: query.language,
       });
 
-      const text = params.input || params.text!;
-      const format = params.response_format || 'mp3';
+      const text = parsed.input || parsed.text!;
+      const format = parsed.response_format || 'mp3';
 
       // 查询音色
-      const voice = await voiceService.getByLocalName(params.voice);
+      const voice = await voiceService.getByLocalName(parsed.voice);
       if (!voice) {
+        await synthesisService.logFailedRequest({
+          endpoint: ENDPOINT,
+          statusCode: 404,
+          errorCode: 'voice_not_found',
+          errorMessage: `Voice not found: ${parsed.voice}`,
+          voiceLocalName: parsed.voice,
+          model: parsed.model,
+          inputText: text,
+          format,
+          style: parsed.style,
+          speed: parsed.speed,
+          clientIp: request.ip,
+          userAgent: request.headers['user-agent'],
+          durationMs: Date.now() - startTime,
+        });
         return reply.status(404).send({
           error: {
-            message: `Voice not found: ${params.voice}`,
+            message: `Voice not found: ${parsed.voice}`,
             type: 'invalid_request_error',
             code: 'voice_not_found',
           },
@@ -174,12 +241,13 @@ export async function audioRoutes(fastify: FastifyInstance) {
       const result = await synthesisService.synthesizeWithVoice({
         text,
         voice,
-        model: params.model,
+        model: parsed.model,
         format,
-        style: params.style,
-        speed: params.speed,
+        style: parsed.style,
+        speed: parsed.speed,
         clientIp: request.ip,
         userAgent: request.headers['user-agent'],
+        endpoint: ENDPOINT,
       });
 
       // 返回音频
@@ -191,6 +259,15 @@ export async function audioRoutes(fastify: FastifyInstance) {
 
     } catch (error: any) {
       if (error instanceof z.ZodError) {
+        await synthesisService.logFailedRequest({
+          endpoint: ENDPOINT,
+          statusCode: 400,
+          errorCode: 'invalid_parameters',
+          errorMessage: error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; '),
+          clientIp: request.ip,
+          userAgent: request.headers['user-agent'],
+          durationMs: Date.now() - startTime,
+        });
         return reply.status(400).send({
           error: {
             message: 'Invalid request parameters',

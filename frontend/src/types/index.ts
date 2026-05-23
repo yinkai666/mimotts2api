@@ -23,6 +23,7 @@ export interface Voice {
 
 export interface SynthesisLog {
   id: string;
+  endpoint?: string;
   voiceLocalName?: string;
   providerVoiceId?: string;
   model: string;
@@ -32,11 +33,49 @@ export interface SynthesisLog {
   style?: string;
   speed?: number;
   success: boolean;
+  statusCode?: number;
+  errorCode?: string;
   errorMessage?: string;
   durationMs?: number;
   audioSize?: number;
   clientIp?: string;
   createdAt: string;
+}
+
+export interface LogStats {
+  total: number;
+  successful: number;
+  failed: number;
+  successRate: number;
+  rpm: number;
+  requestsLastHour: number;
+  requestsLast24h: number;
+  failedLast24h: number;
+  avgDurationMs: number;
+}
+
+export interface TimeseriesBucket {
+  time: string;
+  total: number;
+  success: number;
+  failed: number;
+}
+
+export interface TimeseriesResponse {
+  range: 'hour' | 'day';
+  bucketMs: number;
+  buckets: TimeseriesBucket[];
+}
+
+export interface ErrorDistributionItem {
+  errorCode: string;
+  statusCode?: number;
+  count: number;
+}
+
+export interface ErrorDistributionResponse {
+  range: 'hour' | 'day' | 'all';
+  items: ErrorDistributionItem[];
 }
 
 export interface AppSetting {

@@ -63,6 +63,7 @@ model SynthesisLog {
   voice           Voice?   @relation(fields: [voiceId], references: [id], onDelete: SetNull)
   voiceLocalName  String?
   providerVoiceId String?
+  endpoint        String?
   model           String
   inputText       String   @db.Text
   inputLength     Int
@@ -70,6 +71,8 @@ model SynthesisLog {
   style           String?
   speed           Float?
   success         Boolean
+  statusCode      Int?
+  errorCode       String?
   errorMessage    String?  @db.Text
   durationMs      Int?
   audioSize       Int?
@@ -79,6 +82,8 @@ model SynthesisLog {
 
   @@index([success])
   @@index([createdAt])
+  @@index([endpoint])
+  @@index([errorCode])
   @@map("synthesis_logs")
 }
 

@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { synthesisService } from '../services/synthesis.service';
 import { voiceService } from '../services/voice.service';
 
+const ENDPOINT = '/api/synthesize';
+
 const synthesizeSchema = z.object({
   text: z.string().min(1).max(4096),
   voice: z.string(),
@@ -18,25 +20,44 @@ export async function synthesizeRoutes(fastify: FastifyInstance) {
   fastify.post('/api/synthesize', {
     onRequest: [fastify.authenticate],
   }, async (request, reply) => {
+    const startTime = Date.now();
+    let parsed: z.infer<typeof synthesizeSchema> | null = null;
+
     try {
-      const params = synthesizeSchema.parse(request.body);
+      parsed = synthesizeSchema.parse(request.body);
 
       // 查询音色配置
-      const voice = await voiceService.getByLocalName(params.voice);
+      const voice = await voiceService.getByLocalName(parsed.voice);
       if (!voice) {
+        await synthesisService.logFailedRequest({
+          endpoint: ENDPOINT,
+          statusCode: 404,
+          errorCode: 'voice_not_found',
+          errorMessage: `Voice not found: ${parsed.voice}`,
+          voiceLocalName: parsed.voice,
+          model: parsed.model,
+          inputText: parsed.text,
+          format: parsed.format || 'mp3',
+          style: parsed.style,
+          speed: parsed.speed,
+          clientIp: request.ip,
+          userAgent: request.headers['user-agent'],
+          durationMs: Date.now() - startTime,
+        });
         return reply.status(404).send({ error: 'Voice not found' });
       }
 
       // 调用合成服务
       const result = await synthesisService.synthesizeWithVoice({
-        text: params.text,
+        text: parsed.text,
         voice,
-        model: params.model,
-        format: params.format || 'mp3',
-        style: params.style,
-        speed: params.speed,
+        model: parsed.model,
+        format: parsed.format || 'mp3',
+        style: parsed.style,
+        speed: parsed.speed,
         clientIp: request.ip,
         userAgent: request.headers['user-agent'],
+        endpoint: ENDPOINT,
       });
 
       // 返回音频
@@ -47,6 +68,16 @@ export async function synthesizeRoutes(fastify: FastifyInstance) {
         .send(result.audioData);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
+        await synthesisService.logFailedRequest({
+          endpoint: ENDPOINT,
+          statusCode: 400,
+          errorCode: 'invalid_parameters',
+          errorMessage: error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; '),
+          inputText: (request.body as any)?.text,
+          clientIp: request.ip,
+          userAgent: request.headers['user-agent'],
+          durationMs: Date.now() - startTime,
+        });
         return reply.status(400).send({ error: 'Invalid request', details: error.errors });
       }
       return reply.status(500).send({ error: error.message });

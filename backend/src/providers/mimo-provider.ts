@@ -155,15 +155,25 @@ export class MiMoProvider implements TTSProvider {
       };
     } catch (error: any) {
       const durationMs = Date.now() - startTime;
+      const upstreamStatus = error?.response?.status;
+      const upstreamData = error?.response?.data;
+      const upstreamMessage =
+        upstreamData?.error?.message || upstreamData?.message || error.message;
       logger.error(
         {
           error: error.message,
+          upstreamStatus,
+          upstreamData,
           durationMs,
           voice: params.voice,
         },
         'Synthesis failed'
       );
-      throw new Error(`MiMo synthesis failed: ${error.message}`);
+      const wrapped: any = new Error(`MiMo synthesis failed: ${upstreamMessage}`);
+      wrapped.upstreamStatus = upstreamStatus;
+      wrapped.upstreamCode = upstreamData?.error?.code;
+      wrapped.upstreamType = upstreamData?.error?.type;
+      throw wrapped;
     }
   }
 
