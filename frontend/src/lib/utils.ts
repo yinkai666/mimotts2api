@@ -120,15 +120,10 @@ export function downloadBlob(blob: Blob, filename: string) {
 /**
  * 格式化时长：
  * - < 1s    → "xxx ms"
- * - < 60s   → "x.xx s"
- * - ≥ 60s   → "x'xx""
+ * - ≥ 1s    → "x.xx s"
  */
 export function formatDuration(ms?: number | null): string {
   if (ms == null) return '—';
   if (ms < 1000) return `${ms} ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(2)} s`;
-  const total = Math.round(ms / 1000);
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  return `${m}'${s.toString().padStart(2, '0')}"`;
+  return `${(ms / 1000).toFixed(2)} s`;
 }
