@@ -18,7 +18,7 @@ export class MiMoProvider implements TTSProvider {
   constructor() {
     // 初始化一个空的 httpClient，后续通过 updateConfig 动态配置
     this.httpClient = axios.create({
-      timeout: 60000,
+      timeout: 120000,
       headers: {
         'Content-Type': 'application/json',
       },
