@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { voiceApi, synthesisApi, settingsApi, authApi } from '@/lib/api';
-import { generateAiyuejiConfig, downloadBlob, buildMimoCurlPreview } from '@/lib/utils';
+import { generateAiyuejiConfig, downloadBlob, buildMimoCurlPreview, formatDuration } from '@/lib/utils';
 import type {
   Voice,
   AppSetting,
@@ -1046,7 +1046,7 @@ export default function DashboardPage() {
                 <StatCard
                   label="近 24 小时调用"
                   value={logStats?.requestsLast24h ?? '—'}
-                  hint={`其中失败 ${logStats?.failedLast24h ?? 0} · 平均 ${logStats ? Math.round(logStats.avgDurationMs) : 0} ms`}
+                  hint={`其中失败 ${logStats?.failedLast24h ?? 0} · 平均 ${logStats ? formatDuration(logStats.avgDurationMs) : '—'}`}
                   tone={logStats && logStats.failedLast24h > 0 ? 'warn' : 'ok'}
                 />
               </div>
@@ -1183,7 +1183,7 @@ export default function DashboardPage() {
                           <td className="px-3 py-2 text-xs font-mono text-gray-700 whitespace-nowrap" title={l.errorMessage || ''}>
                             {l.errorCode || (l.success ? '—' : 'unknown')}
                           </td>
-                          <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{l.durationMs != null ? `${l.durationMs} ms` : '—'}</td>
+                          <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{formatDuration(l.durationMs)}</td>
                           <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{l.clientIp || '—'}</td>
                         </tr>
                       ))}
