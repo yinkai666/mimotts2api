@@ -33,6 +33,62 @@ function hasLeadingStyleTag(text: string): boolean {
   return /^[\(\[（][^)\]）]{1,100}[\)\]）]/.test(text.trim());
 }
 
+type SynthesisExample = {
+  name: string;
+  text: string;
+  format?: 'mp3' | 'wav';
+  style?: string;
+};
+
+const SYNTHESIS_EXAMPLES: SynthesisExample[] = [
+  {
+    name: '《诛仙》开篇 · 道法自然',
+    text: '天地不仁，以万物为刍狗。这句话出自《道德经》，看似无情，实则蕴含天地至理。青云门的长老曾对弟子讲道：天地待世间万物如同祭祀用的草狗，没有亲疏厚薄之分，众生平等，各凭造化。修仙之人若能悟透其中真意，方可一窥大道，踏上那条通往长生的漫漫长路。',
+    format: 'mp3',
+    style: '沉稳',
+  },
+  {
+    name: '《斗破苍穹》萧炎归来 · 莫欺少年穷',
+    text: '萧炎缓缓抬起头，目光在那群曾经讥讽过他的人脸上一一扫过，声音不大，却铿锵有力：三十年河东，三十年河西，莫欺少年穷！他身后斗气翻涌，昔日那个被废掉的少爷已经脱胎换骨。整个加玛帝国都会记住这一天，记住萧家少年带着无尽的怒火与不甘，重新踏上巅峰之路。',
+    format: 'mp3',
+    style: '激昂',
+  },
+  {
+    name: '《凡人修仙传》韩立入门',
+    text: '七玄门，这个原本默默无名的小门派，最近几年却如同得到了什么际遇一般，一跃成为七玄国境内首屈一指的大派。门中弟子上千，长老数十，声势远超从前。少年韩立背着包袱站在山门之外，望着那高耸入云的青色山峰，心中既有忐忑，也燃起了一丝从未有过的渴望——他要在这里，走出一条属于自己的修仙之路。',
+    format: 'mp3',
+  },
+  {
+    name: '《雪中悍刀行》徐凤年饮酒',
+    text: '徐凤年慢悠悠地走进酒馆，把佩刀往桌上一搁，朝柜台喊了一声：小二，上酒，我徐凤年今日要痛饮一回。店里几个江湖客闻声侧目，有人冷笑，有人皱眉。这位北凉世子顶着一身风尘，却全然不在意旁人眼光。他端起酒碗一饮而尽，心中明白：这一路从北凉走到江南，看尽了人间冷暖，也终于认清了几个真正能托付生死的兄弟。',
+    format: 'mp3',
+    style: '豪爽',
+  },
+  {
+    name: '《三体》罗辑面壁 · 黑暗森林',
+    text: '罗辑站在联合国总部的讲台上，望着台下黑压压的人群，神情前所未有的平静。他缓缓开口：弱小和无知不是生存的障碍，傲慢才是。整个大厅瞬间陷入死寂。这位曾经颓废度日的社会学者，如今是人类最后一位面壁者，即将用自己的方式，去面对那个名为黑暗森林的宇宙真相。',
+    format: 'mp3',
+    style: '沉稳',
+  },
+  {
+    name: '《盗墓笔记》吴邪 · 十年之约',
+    text: '吴邪一个人坐在长白山顶的小亭子里，肩头落满了雪。他从怀中掏出一张泛黄的照片，指尖轻轻摩挲着照片里那个穿黑衣的身影，自言自语：闷油瓶，十年之约，我没忘。声音被山风吹散在茫茫雪原里。这一等就是整整十年，从青葱少年到三十出头，他用半个青春，换一个不知能不能等到的回答。',
+    format: 'mp3',
+    style: '低沉',
+  },
+  {
+    name: '《庆余年》范闲诗会',
+    text: '范闲端着酒杯走到台前，面对满座达官显贵和文人墨客，缓缓开口，声音不大，却字字清晰：我希望这个世界上的每一个人，都能有尊严地活着，而不是像狗一样苟且偷生。满堂哗然。这个从澹州小城走出来的少年，从这一刻起，真正踏入了庆国京都的风口浪尖。从此以后，他的每一步都将牵动天下大势。',
+    format: 'mp3',
+  },
+  {
+    name: '《明朝那些事儿》卷末 · 化为尘土',
+    text: '我之所以写下这些文字，不是为了证明什么，只是想告诉大家：所有的繁华，终归化为尘土；所有的英雄，终将归于沉默。三百年大明王朝，从朱元璋开局一个碗，到崇祯煤山自缢，看似漫长的历史，不过是后人茶余饭后的几行字。但正是这无数小人物的悲欢离合，汇成了我们今天读到的那段波澜壮阔的历史。',
+    format: 'wav',
+    style: '沉稳',
+  },
+];
+
 function StatCard({
   label,
   value,
@@ -312,6 +368,12 @@ export default function DashboardPage() {
   const handleDownload = () => {
     if (!audioUrl) return;
     fetch(audioUrl).then(r => r.blob()).then(b => downloadBlob(b, `tts_${Date.now()}.${format}`));
+  };
+
+  const applyExample = (ex: SynthesisExample) => {
+    setText(ex.text);
+    if (ex.format) setFormat(ex.format);
+    setStyle(ex.style ?? '');
   };
 
   const handlePreviewStyled = async () => {
@@ -651,6 +713,32 @@ export default function DashboardPage() {
                   <button onClick={handleDownload} className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">下载音频</button>
                 </div>
               )}
+
+              <div className="border-t pt-6">
+                <h3 className="text-sm font-medium text-gray-700 mb-1">听书场景试听示例</h3>
+                <p className="text-xs text-gray-500 mb-3">挑选了 8 段热门小说桥段，每段 150 字左右，贴近真实听书体验。点「使用此示例」会填入上方表单（音色保持当前选择），再点「合成语音」即可试听。</p>
+                <ul className="space-y-2">
+                  {SYNTHESIS_EXAMPLES.map(ex => (
+                    <li key={ex.name} className="flex items-start justify-between gap-3 p-3 bg-gray-50 rounded-md">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium text-gray-900">
+                          {ex.name}
+                          {ex.format && <span className="ml-2 text-xs text-gray-400">[{ex.format}]</span>}
+                          {ex.style && <span className="ml-1 text-xs text-purple-500">[风格:{ex.style}]</span>}
+                          <span className="ml-2 text-xs text-gray-400">约 {ex.text.length} 字</span>
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1 line-clamp-2">{ex.text}</div>
+                      </div>
+                      <button
+                        onClick={() => applyExample(ex)}
+                        className="shrink-0 px-3 py-1 text-xs bg-blue-50 text-blue-600 border border-blue-200 rounded hover:bg-blue-100"
+                      >
+                        使用此示例
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           )}
 
