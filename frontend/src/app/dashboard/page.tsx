@@ -210,6 +210,13 @@ export default function DashboardPage() {
   const [style, setStyle] = useState('');
   const [audioUrl, setAudioUrl] = useState('');
   const [synthesizing, setSynthesizing] = useState(false);
+  const [synthesisMeta, setSynthesisMeta] = useState<{
+    generationMs: number;
+    clientElapsedMs: number;
+    audioDurationSec: number;
+  } | null>(null);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [voiceLibraryTab, setVoiceLibraryTab] = useState<'builtin' | 'styled' | 'custom' | 'cloned'>('builtin');
   const [sampleAudioUrl, setSampleAudioUrl] = useState('');
 
@@ -358,9 +365,18 @@ export default function DashboardPage() {
   const handleSynthesize = async () => {
     if (!text || !selectedVoice) return;
     setSynthesizing(true);
+    setSynthesisMeta(null);
+    const t0 = performance.now();
     try {
-      const blob = await synthesisApi.synthesize({ text, voice: selectedVoice, format, style: style || undefined });
-      setAudioUrl(URL.createObjectURL(blob));
+      const { blob, generationMs, audioDurationMs } = await synthesisApi.synthesize({ text, voice: selectedVoice, format, style: style || undefined });
+      const clientElapsedMs = Math.round(performance.now() - t0);
+      const url = URL.createObjectURL(blob);
+      setAudioUrl(url);
+      setSynthesisMeta({
+        generationMs,
+        clientElapsedMs,
+        audioDurationSec: audioDurationMs > 0 ? audioDurationMs / 1000 : 0,
+      });
     } catch (e: any) { alert('合成失败: ' + (e.response?.data?.error || e.message)); }
     finally { setSynthesizing(false); }
   };
@@ -708,9 +724,58 @@ export default function DashboardPage() {
                 {synthesizing ? '合成中...' : '合成语音'}
               </button>
               {audioUrl && (
-                <div className="space-y-4">
-                  <audio controls src={audioUrl} className="w-full" />
-                  <button onClick={handleDownload} className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">下载音频</button>
+                <div className="space-y-3">
+                  <audio
+                    ref={audioRef}
+                    controls
+                    src={audioUrl}
+                    className="w-full"
+                    onLoadedMetadata={(e) => {
+                      const dur = e.currentTarget.duration;
+                      if (Number.isFinite(dur) && dur > 0) {
+                        setSynthesisMeta(prev => prev
+                          ? { ...prev, audioDurationSec: prev.audioDurationSec > 0 ? prev.audioDurationSec : dur }
+                          : prev);
+                      }
+                      e.currentTarget.playbackRate = playbackRate;
+                    }}
+                  />
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-500 mr-1">倍速</span>
+                      {[0.75, 1, 1.25, 1.5, 1.75, 2].map(rate => (
+                        <button
+                          key={rate}
+                          onClick={() => {
+                            setPlaybackRate(rate);
+                            if (audioRef.current) audioRef.current.playbackRate = rate;
+                          }}
+                          className={`px-2 py-1 text-xs rounded border ${playbackRate === rate
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                        >
+                          {rate}x
+                        </button>
+                      ))}
+                    </div>
+                    <button onClick={handleDownload} className="px-4 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700">下载音频</button>
+                  </div>
+                  {synthesisMeta && (
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 bg-gray-50 rounded-md px-3 py-2">
+                      <span>生成耗时（服务端）：<span className="font-medium text-gray-900">{synthesisMeta.generationMs > 0 ? `${(synthesisMeta.generationMs / 1000).toFixed(2)} s` : '—'}</span></span>
+                      <span>客户端总耗时：<span className="font-medium text-gray-900">{(synthesisMeta.clientElapsedMs / 1000).toFixed(2)} s</span></span>
+                      <span>音频时长：<span className="font-medium text-gray-900">{synthesisMeta.audioDurationSec > 0 ? `${synthesisMeta.audioDurationSec.toFixed(2)} s` : '—'}</span></span>
+                      <span>
+                        RTF：
+                        <span className="font-medium text-gray-900">
+                          {synthesisMeta.audioDurationSec > 0 && synthesisMeta.generationMs > 0
+                            ? (synthesisMeta.generationMs / 1000 / synthesisMeta.audioDurationSec).toFixed(3)
+                            : '—'}
+                        </span>
+                        <span className="text-gray-400 ml-1">（&lt; 1 为实时）</span>
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
 
