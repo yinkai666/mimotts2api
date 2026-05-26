@@ -167,13 +167,12 @@ export const synthesisApi = {
     format?: string;
     style?: string;
     speed?: number;
-  }): Promise<{ blob: Blob; generationMs: number; audioDurationMs: number }> => {
+  }): Promise<{ blob: Blob; generationMs: number }> => {
     const response = await api.post('/api/synthesize', params, {
       responseType: 'blob',
     });
     const generationMs = Number(response.headers['x-generation-ms']) || 0;
-    const audioDurationMs = Number(response.headers['x-audio-duration-ms']) || 0;
-    return { blob: response.data as Blob, generationMs, audioDurationMs };
+    return { blob: response.data as Blob, generationMs };
   },
   getLogs: async (filters?: {
     success?: boolean;

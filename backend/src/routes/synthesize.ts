@@ -66,8 +66,7 @@ export async function synthesizeRoutes(fastify: FastifyInstance) {
         .header('Content-Type', mimeType)
         .header('Content-Length', result.audioData.length)
         .header('X-Generation-Ms', (Date.now() - startTime).toString())
-        .header('X-Audio-Duration-Ms', result.durationMs?.toString() || '0')
-        .header('Access-Control-Expose-Headers', 'X-Generation-Ms, X-Audio-Duration-Ms')
+        .header('Access-Control-Expose-Headers', 'X-Generation-Ms')
         .send(result.audioData);
     } catch (error: any) {
       if (error instanceof z.ZodError) {

@@ -368,14 +368,14 @@ export default function DashboardPage() {
     setSynthesisMeta(null);
     const t0 = performance.now();
     try {
-      const { blob, generationMs, audioDurationMs } = await synthesisApi.synthesize({ text, voice: selectedVoice, format, style: style || undefined });
+      const { blob, generationMs } = await synthesisApi.synthesize({ text, voice: selectedVoice, format, style: style || undefined });
       const clientElapsedMs = Math.round(performance.now() - t0);
       const url = URL.createObjectURL(blob);
       setAudioUrl(url);
       setSynthesisMeta({
         generationMs,
         clientElapsedMs,
-        audioDurationSec: audioDurationMs > 0 ? audioDurationMs / 1000 : 0,
+        audioDurationSec: 0,
       });
     } catch (e: any) { alert('合成失败: ' + (e.response?.data?.error || e.message)); }
     finally { setSynthesizing(false); }
@@ -733,9 +733,7 @@ export default function DashboardPage() {
                     onLoadedMetadata={(e) => {
                       const dur = e.currentTarget.duration;
                       if (Number.isFinite(dur) && dur > 0) {
-                        setSynthesisMeta(prev => prev
-                          ? { ...prev, audioDurationSec: prev.audioDurationSec > 0 ? prev.audioDurationSec : dur }
-                          : prev);
+                        setSynthesisMeta(prev => prev ? { ...prev, audioDurationSec: dur } : prev);
                       }
                       e.currentTarget.playbackRate = playbackRate;
                     }}
