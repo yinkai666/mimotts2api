@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { voiceApi, synthesisApi, settingsApi, authApi } from '@/lib/api';
+import { voiceApi, synthesisApi, settingsApi, authApi, clearToken, getToken } from '@/lib/api';
 import { generateAiyuejiConfig, downloadBlob, buildMimoCurlPreview, formatDuration } from '@/lib/utils';
 import type {
   Voice,
@@ -462,7 +462,7 @@ export default function DashboardPage() {
   const playVoiceSample = async (voice: Voice) => {
     if (!voice.sampleFilePath) return;
     try {
-      const token = localStorage.getItem('token');
+      const token = getToken();
       const response = await fetch(`/api/voices/${voice.id}/sample`, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
@@ -546,7 +546,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleLogout = () => { localStorage.removeItem('token'); router.push('/'); };
+  const handleLogout = () => { clearToken(); router.push('/'); };
 
   // 获取某个设置项的当前值（用于显示脱敏占位）
   const getSettingDisplay = (key: string) => {

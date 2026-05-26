@@ -10,6 +10,7 @@ function getJWTPayload(request: any): JWTPayload {
 const loginSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(1),
+  rememberMe: z.boolean().optional().default(true),
 });
 
 const changePasswordSchema = z.object({
@@ -28,11 +29,14 @@ export async function authRoutes(fastify: FastifyInstance) {
         return reply.status(401).send({ error: 'Invalid credentials' });
       }
 
-      const token = fastify.jwt.sign({
-        userId: result.user.id,
-        username: result.user.username,
-        role: result.user.role,
-      });
+      const token = fastify.jwt.sign(
+        {
+          userId: result.user.id,
+          username: result.user.username,
+          role: result.user.role,
+        },
+        body.rememberMe ? {} : { expiresIn: '2h' }
+      );
 
       return {
         token,

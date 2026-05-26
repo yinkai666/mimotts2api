@@ -11,6 +11,29 @@ import type {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
+export const getToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('token') ?? sessionStorage.getItem('token');
+};
+
+export const setToken = (token: string, remember: boolean) => {
+  if (typeof window === 'undefined') return;
+  // 切换存储位置时先清掉另一处，避免残留
+  if (remember) {
+    sessionStorage.removeItem('token');
+    localStorage.setItem('token', token);
+  } else {
+    localStorage.removeItem('token');
+    sessionStorage.setItem('token', token);
+  }
+};
+
+export const clearToken = () => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('token');
+  sessionStorage.removeItem('token');
+};
+
 const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -20,11 +43,9 @@ const api = axios.create({
 
 // 请求拦截器：添加 token
 api.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+  const token = getToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
@@ -35,7 +56,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('token');
+        clearToken();
         window.location.href = '/';
       }
     }
@@ -45,8 +66,8 @@ api.interceptors.response.use(
 
 // Auth API
 export const authApi = {
-  login: async (username: string, password: string) => {
-    const { data } = await api.post('/api/auth/login', { username, password });
+  login: async (username: string, password: string, rememberMe: boolean = true) => {
+    const { data } = await api.post('/api/auth/login', { username, password, rememberMe });
     return data;
   },
   me: async (): Promise<User> => {
