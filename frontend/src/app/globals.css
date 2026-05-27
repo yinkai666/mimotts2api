@@ -60,3 +60,9 @@
       sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   }
 }
+
+@layer utilities {
+  .touch-scroll-x {
+    -webkit-overflow-scrolling: touch;
+  }
+}

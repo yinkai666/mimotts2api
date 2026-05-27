@@ -103,9 +103,9 @@ function StatCard({
   const toneClass =
     tone === 'warn' ? 'text-amber-600' : tone === 'ok' ? 'text-green-600' : 'text-gray-500';
   return (
-    <div className="border rounded-lg p-4 bg-white">
+    <div className="border rounded-lg p-3 sm:p-4 bg-white min-w-0">
       <div className="text-xs text-gray-500 mb-1">{label}</div>
-      <div className="text-2xl font-semibold text-gray-900">{value}</div>
+      <div className="text-xl sm:text-2xl font-semibold text-gray-900 break-words">{value}</div>
       {hint && <div className={`text-xs mt-1 ${toneClass}`}>{hint}</div>}
     </div>
   );
@@ -655,17 +655,17 @@ export default function DashboardPage() {
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="text-lg">加载中...</div></div>;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">MiMo TTS Proxy Manager</h1>
-          <button onClick={handleLogout} className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900">退出登录</button>
+        <div className="max-w-7xl mx-auto px-3 py-3 sm:px-6 sm:py-4 lg:px-8 flex justify-between items-center gap-3">
+          <h1 className="min-w-0 truncate text-lg sm:text-2xl font-bold text-gray-900">MiMo TTS Proxy Manager</h1>
+          <button onClick={handleLogout} className="shrink-0 px-3 sm:px-4 py-2 text-sm text-gray-700 hover:text-gray-900">退出登录</button>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 mt-4 sm:mt-6">
+        <div className="border-b border-gray-200 -mx-3 px-3 sm:mx-0 sm:px-0 overflow-x-auto touch-scroll-x">
+          <nav className="-mb-px flex min-w-max gap-5 sm:gap-8">
             {[
               { id: 'synthesize', name: '语音合成' },
               { id: 'styled', name: '风格模板' },
@@ -683,7 +683,7 @@ export default function DashboardPage() {
           </nav>
         </div>
 
-        <div className="mt-6 bg-white shadow rounded-lg p-6">
+        <div className="mt-4 sm:mt-6 bg-white shadow rounded-lg p-4 sm:p-6 overflow-hidden">
 
           {/* ========== 语音合成 ========== */}
           {activeTab === 'synthesize' && (
@@ -720,7 +720,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <button onClick={handleSynthesize} disabled={synthesizing || !text}
-                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+                className="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
                 {synthesizing ? '合成中...' : '合成语音'}
               </button>
               {audioUrl && (
@@ -739,8 +739,8 @@ export default function DashboardPage() {
                     }}
                   />
                   <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-gray-500 mr-1">倍速</span>
+                    <div className="flex flex-wrap items-center gap-1">
+                      <span className="w-full sm:w-auto text-xs text-gray-500 sm:mr-1">倍速</span>
                       {[0.75, 1, 1.25, 1.5, 1.75, 2].map(rate => (
                         <button
                           key={rate}
@@ -756,7 +756,7 @@ export default function DashboardPage() {
                         </button>
                       ))}
                     </div>
-                    <button onClick={handleDownload} className="px-4 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700">下载音频</button>
+                    <button onClick={handleDownload} className="w-full sm:w-auto px-4 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700">下载音频</button>
                   </div>
                   {synthesisMeta && (
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 bg-gray-50 rounded-md px-3 py-2">
@@ -782,7 +782,7 @@ export default function DashboardPage() {
                 <p className="text-xs text-gray-500 mb-3">挑选了 8 段热门小说桥段，每段 150 字左右，贴近真实听书体验。点「使用此示例」会填入上方表单（音色保持当前选择），再点「合成语音」即可试听。</p>
                 <ul className="space-y-2">
                   {SYNTHESIS_EXAMPLES.map(ex => (
-                    <li key={ex.name} className="flex items-start justify-between gap-3 p-3 bg-gray-50 rounded-md">
+                    <li key={ex.name} className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 p-3 bg-gray-50 rounded-md">
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium text-gray-900">
                           {ex.name}
@@ -794,7 +794,7 @@ export default function DashboardPage() {
                       </div>
                       <button
                         onClick={() => applyExample(ex)}
-                        className="shrink-0 px-3 py-1 text-xs bg-blue-50 text-blue-600 border border-blue-200 rounded hover:bg-blue-100"
+                        className="shrink-0 w-full sm:w-auto px-3 py-1.5 text-xs bg-blue-50 text-blue-600 border border-blue-200 rounded hover:bg-blue-100"
                       >
                         使用此示例
                       </button>
@@ -875,20 +875,20 @@ export default function DashboardPage() {
                     </select>
                   </div>
 
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
                     <button onClick={handlePreviewStyled}
                       disabled={previewingStyled || !styledForm.baseVoiceLocalName || !styledForm.previewText || (!styledForm.style.trim() && !hasLeadingStyleTag(styledForm.previewText))}
-                      className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+                      className="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
                       {previewingStyled ? '合成中...' : '合成预览'}
                     </button>
                     <button onClick={handleSaveStyled}
                       disabled={savingStyled || !styledPreviewBlob || !styledForm.displayName || !styledForm.localName || !styledForm.baseVoiceLocalName || !styledForm.previewText || (!styledForm.style.trim() && !hasLeadingStyleTag(styledForm.previewText))}
-                      className="px-6 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 disabled:opacity-50">
+                      className="w-full sm:w-auto px-6 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 disabled:opacity-50">
                       {savingStyled ? '保存中...' : '保存到音色库'}
                     </button>
                     {styledPreviewBlob && (
                       <button onClick={() => downloadBlob(styledPreviewBlob, `styled_voice_preview.${styledForm.format}`)}
-                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">下载预览</button>
+                        className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">下载预览</button>
                     )}
                   </div>
 
@@ -902,12 +902,12 @@ export default function DashboardPage() {
               </div>
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <h3 className="text-sm font-medium text-gray-700">将发送到 MiMo 的 cURL</h3>
                   <button onClick={() => navigator.clipboard.writeText(styledCurlPreview)}
                     className="px-3 py-2 text-sm bg-white text-gray-700 rounded-md hover:bg-gray-100 border border-gray-200">复制</button>
                 </div>
-                <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-x-auto text-sm whitespace-pre-wrap break-all">{styledCurlPreview}</pre>
+                <pre className="bg-gray-900 text-gray-100 p-3 sm:p-4 rounded-md overflow-x-auto text-xs sm:text-sm whitespace-pre-wrap break-all">{styledCurlPreview}</pre>
               </div>
             </div>
           )}
@@ -989,20 +989,20 @@ export default function DashboardPage() {
                     </label>
                   </div>
 
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
                     <button onClick={handlePreviewDesign}
                       disabled={previewingDesign || !designForm.description || !designForm.previewText}
-                      className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+                      className="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
                       {previewingDesign ? '合成中...' : '合成预览'}
                     </button>
                     <button onClick={handleSaveDesign}
                       disabled={savingDesign || !designPreviewBlob || !designForm.displayName || !designForm.localName || !designForm.description || !designForm.previewText}
-                      className="px-6 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 disabled:opacity-50">
+                      className="w-full sm:w-auto px-6 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 disabled:opacity-50">
                       {savingDesign ? '保存中...' : '保存到音色库'}
                     </button>
                     {designPreviewBlob && (
                       <button onClick={() => downloadBlob(designPreviewBlob, `voice_design_preview.${designForm.format}`)}
-                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">下载预览</button>
+                        className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">下载预览</button>
                     )}
                   </div>
 
@@ -1016,12 +1016,12 @@ export default function DashboardPage() {
               </div>
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <h3 className="text-sm font-medium text-gray-700">将发送到 MiMo 的 cURL</h3>
                   <button onClick={() => navigator.clipboard.writeText(designCurlPreview)}
                     className="px-3 py-2 text-sm bg-white text-gray-700 rounded-md hover:bg-gray-100 border border-gray-200">复制</button>
                 </div>
-                <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-x-auto text-sm whitespace-pre-wrap break-all">{designCurlPreview}</pre>
+                <pre className="bg-gray-900 text-gray-100 p-3 sm:p-4 rounded-md overflow-x-auto text-xs sm:text-sm whitespace-pre-wrap break-all">{designCurlPreview}</pre>
               </div>
             </div>
           )}
@@ -1030,9 +1030,9 @@ export default function DashboardPage() {
           {activeTab === 'voices' && (
             <div className="space-y-6">
               <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <h2 className="text-xl font-semibold">音色库</h2>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-2">
                     <button onClick={() => setActiveTab('styled')}
                       className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">新增风格模板</button>
                     <button onClick={() => setActiveTab('design')}
@@ -1131,10 +1131,10 @@ export default function DashboardPage() {
                   <p className="text-xs text-gray-400 mt-1">如果服务器未设置 Token，请留空</p>
                 </div>
                 {currentProxyToken && (
-                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
-                    <div className="flex items-center justify-between gap-3">
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3 md:col-span-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <h3 className="text-sm font-medium text-gray-700">当前后台 Token</h3>
-                      <div className="flex gap-2">
+                      <div className="grid grid-cols-1 sm:flex gap-2">
                         <button onClick={() => setProxyToken(currentProxyToken)}
                           className="px-3 py-2 text-sm bg-white text-gray-700 rounded-md hover:bg-gray-100 border border-gray-200">带入配置生成器</button>
                         <button onClick={() => setShowCurrentProxyToken(v => !v)}
@@ -1149,15 +1149,15 @@ export default function DashboardPage() {
                   </div>
                 )}
               </div>
-              <button onClick={handleGenerateConfig} className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">生成配置</button>
+              <button onClick={handleGenerateConfig} className="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">生成配置</button>
               {generatedConfig && (
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                     <h3 className="text-lg font-medium">生成的配置</h3>
                     <button onClick={() => { navigator.clipboard.writeText(generatedConfig); alert('已复制到剪贴板'); }}
-                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">复制配置</button>
+                      className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">复制配置</button>
                   </div>
-                  <pre className="bg-gray-900 text-gray-100 p-4 rounded-md overflow-x-auto text-sm">{generatedConfig}</pre>
+                  <pre className="bg-gray-900 text-gray-100 p-3 sm:p-4 rounded-md overflow-x-auto text-xs sm:text-sm">{generatedConfig}</pre>
                 </div>
               )}
             </div>
@@ -1166,26 +1166,26 @@ export default function DashboardPage() {
           {/* ========== 调用日志 ========== */}
           {activeTab === 'logs' && (
             <div className="space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3">
                 <div>
                   <h2 className="text-xl font-semibold">调用日志</h2>
                   <p className="text-sm text-gray-500">记录所有合成调用的成功/失败、耗时、错误代码和客户端信息。</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                   <label className="flex items-center gap-2 text-sm text-gray-700">
                     <input type="checkbox" checked={autoRefresh} onChange={e => setAutoRefresh(e.target.checked)}
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                     自动刷新 (10s)
                   </label>
                   <button onClick={() => loadLogs()} disabled={logsLoading}
-                    className="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+                    className="w-full sm:w-auto px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
                     {logsLoading ? '刷新中...' : '刷新'}
                   </button>
                 </div>
               </div>
 
               {/* 总览卡片 */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <StatCard label="总调用数" value={logStats?.total ?? '—'} hint={`成功 ${logStats?.successful ?? 0} · 失败 ${logStats?.failed ?? 0}`} />
                 <StatCard
                   label="成功率"
@@ -1204,9 +1204,9 @@ export default function DashboardPage() {
 
               {/* RPM 时序图 */}
               <div className="border rounded-lg p-4 space-y-3">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <h3 className="text-sm font-medium text-gray-700">请求频率时序图</h3>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {([
                       { id: 'hour', name: '最近 1 小时（按分钟）' },
                       { id: 'day', name: '最近 24 小时（10 分钟一格）' },
@@ -1223,9 +1223,9 @@ export default function DashboardPage() {
 
               {/* 错误分布 */}
               <div className="border rounded-lg p-4 space-y-3">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <h3 className="text-sm font-medium text-gray-700">错误分布</h3>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {([
                       { id: 'hour', name: '近 1 小时' },
                       { id: 'day', name: '近 24 小时' },
@@ -1280,17 +1280,17 @@ export default function DashboardPage() {
               <div className="border rounded-lg p-4 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h3 className="text-sm font-medium text-gray-700">日志明细（共 {logTotal} 条）</h3>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:flex sm:flex-wrap sm:items-center">
                     <select value={logFilters.success}
                       onChange={e => { setLogFilters({ ...logFilters, success: e.target.value as '' | 'true' | 'false' }); setLogPage(0); }}
-                      className="px-2 py-1.5 text-sm border border-gray-300 rounded-md">
+                      className="w-full sm:w-auto px-2 py-1.5 text-sm border border-gray-300 rounded-md">
                       <option value="">全部状态</option>
                       <option value="true">仅成功</option>
                       <option value="false">仅失败</option>
                     </select>
                     <select value={logFilters.endpoint}
                       onChange={e => { setLogFilters({ ...logFilters, endpoint: e.target.value }); setLogPage(0); }}
-                      className="px-2 py-1.5 text-sm border border-gray-300 rounded-md">
+                      className="w-full sm:w-auto px-2 py-1.5 text-sm border border-gray-300 rounded-md">
                       <option value="">全部接口</option>
                       <option value="/v1/audio/speech">/v1/audio/speech</option>
                       <option value="/api/synthesize">/api/synthesize</option>
@@ -1298,10 +1298,10 @@ export default function DashboardPage() {
                     <input type="text" value={logFilters.errorCode}
                       onChange={e => { setLogFilters({ ...logFilters, errorCode: e.target.value }); setLogPage(0); }}
                       placeholder="按错误代码筛选"
-                      className="px-2 py-1.5 text-sm border border-gray-300 rounded-md w-44" />
+                      className="w-full sm:w-44 px-2 py-1.5 text-sm border border-gray-300 rounded-md" />
                     {(logFilters.success || logFilters.endpoint || logFilters.errorCode) && (
                       <button onClick={() => { setLogFilters({ success: '', endpoint: '', errorCode: '' }); setLogPage(0); }}
-                        className="px-2 py-1.5 text-sm text-gray-600 hover:text-gray-900">清除筛选</button>
+                        className="w-full sm:w-auto px-2 py-1.5 text-sm text-gray-600 hover:text-gray-900">清除筛选</button>
                     )}
                   </div>
                 </div>
@@ -1346,9 +1346,9 @@ export default function DashboardPage() {
                     </tbody>
                   </table>
                 </div>
-                <div className="flex items-center justify-between pt-2">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
                   <span className="text-xs text-gray-500">第 {logPage + 1} / {Math.max(1, Math.ceil(logTotal / logPageSize))} 页</span>
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-2 sm:flex gap-2">
                     <button onClick={() => setLogPage(p => Math.max(0, p - 1))} disabled={logPage === 0}
                       className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:opacity-50">上一页</button>
                     <button onClick={() => setLogPage(p => p + 1)} disabled={(logPage + 1) * logPageSize >= logTotal}
@@ -1446,9 +1446,9 @@ export default function DashboardPage() {
                 </div>
                 {currentProxyToken && (
                   <div className="rounded-md bg-gray-50 border border-gray-200 p-3 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <span className="text-sm font-medium text-gray-700">当前生效 Token</span>
-                      <div className="flex gap-2">
+                      <div className="grid grid-cols-2 sm:flex gap-2">
                         <button onClick={() => setShowCurrentProxyToken(v => !v)} className="px-2 py-1 text-xs bg-white border border-gray-200 rounded hover:bg-gray-100">{showCurrentProxyToken ? '隐藏' : '显示'}</button>
                         <button onClick={() => { navigator.clipboard.writeText(currentProxyToken); alert('Token 已复制到剪贴板'); }} className="px-2 py-1 text-xs bg-white border border-gray-200 rounded hover:bg-gray-100">复制</button>
                       </div>
@@ -1458,7 +1458,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 )}
-                <div className="flex gap-2">
+                <div className="grid grid-cols-1 sm:flex gap-2">
                   <button onClick={handleRegenToken} className="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">随机生成 Token</button>
                   <button onClick={handleClearToken} className="px-3 py-2 text-sm bg-red-50 text-red-600 rounded-md hover:bg-red-100">清除 Token</button>
                 </div>
@@ -1488,7 +1488,7 @@ export default function DashboardPage() {
               </div>
 
               <button onClick={handleSaveSettings} disabled={saving}
-                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+                className="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
                 {saving ? '保存中...' : '保存设置'}
               </button>
             </div>
