@@ -12,11 +12,21 @@ const prismaMock = vi.hoisted(() => ({
   },
   synthesisLog: {
     create: vi.fn(),
+    deleteMany: vi.fn(),
   },
 }));
 
 vi.mock('@prisma/client', () => ({
   PrismaClient: vi.fn(() => prismaMock),
+}));
+
+vi.mock('../src/config/env', () => ({
+  config: {
+    synthesisLog: {
+      retentionDays: 30,
+      textMode: 'redacted',
+    },
+  },
 }));
 
 vi.mock('../src/providers/mimo-provider', () => ({
@@ -43,6 +53,8 @@ describe('SynthesisService VoiceDesign templates', () => {
       format: 'mp3',
       durationMs: 10,
     });
+    prismaMock.synthesisLog.create.mockResolvedValue({});
+    prismaMock.synthesisLog.deleteMany.mockResolvedValue({ count: 0 });
   });
 
   it('injects saved VoiceDesign config when synthesizing with a custom template voice', async () => {
@@ -145,5 +157,44 @@ describe('SynthesisService VoiceDesign templates', () => {
         style: undefined,
       })
     );
+  });
+
+  it('redacts input text before storing synthesis logs by default', async () => {
+    const service = new SynthesisService();
+
+    await service.synthesizeWithVoice({
+      text: '这是一段不应该进入数据库的隐私文本。',
+      voice: {
+        localName: 'moli_private',
+        providerVoiceId: '茉莉',
+        model: 'mimo-v2.5-tts',
+        type: 'builtin',
+        configJson: null,
+      },
+      format: 'mp3',
+    });
+
+    expect(prismaMock.synthesisLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        inputText: expect.stringMatching(/^\[redacted length=\d+ sha256=[a-f0-9]{64}\]$/),
+        inputLength: '这是一段不应该进入数据库的隐私文本。'.length,
+      }),
+    });
+    expect(prismaMock.synthesisLog.create.mock.calls[0][0].data.inputText).not.toContain('隐私文本');
+  });
+
+  it('deletes synthesis logs older than the configured retention window', async () => {
+    const service = new SynthesisService();
+    const now = new Date('2026-05-28T12:00:00.000Z');
+
+    await service.cleanupExpiredLogs(now);
+
+    expect(prismaMock.synthesisLog.deleteMany).toHaveBeenCalledWith({
+      where: {
+        createdAt: {
+          lt: new Date('2026-04-28T12:00:00.000Z'),
+        },
+      },
+    });
   });
 });
