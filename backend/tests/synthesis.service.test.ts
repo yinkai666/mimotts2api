@@ -24,7 +24,6 @@ vi.mock('../src/config/env', () => ({
   config: {
     synthesisLog: {
       retentionDays: 30,
-      textMode: 'redacted',
     },
   },
 }));
@@ -159,11 +158,12 @@ describe('SynthesisService VoiceDesign templates', () => {
     );
   });
 
-  it('redacts input text before storing synthesis logs by default', async () => {
+  it('stores input text as-is in synthesis logs', async () => {
     const service = new SynthesisService();
+    const sourceText = '这是一段希望能在后台日志直接看到的文本。';
 
     await service.synthesizeWithVoice({
-      text: '这是一段不应该进入数据库的隐私文本。',
+      text: sourceText,
       voice: {
         localName: 'moli_private',
         providerVoiceId: '茉莉',
@@ -176,11 +176,10 @@ describe('SynthesisService VoiceDesign templates', () => {
 
     expect(prismaMock.synthesisLog.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        inputText: expect.stringMatching(/^\[redacted length=\d+ sha256=[a-f0-9]{64}\]$/),
-        inputLength: '这是一段不应该进入数据库的隐私文本。'.length,
+        inputText: sourceText,
+        inputLength: sourceText.length,
       }),
     });
-    expect(prismaMock.synthesisLog.create.mock.calls[0][0].data.inputText).not.toContain('隐私文本');
   });
 
   it('deletes synthesis logs older than the configured retention window', async () => {

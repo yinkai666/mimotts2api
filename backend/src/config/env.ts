@@ -14,7 +14,6 @@ const envSchema = z.object({
   STORAGE_DIR: z.string().default('./uploads'),
   MAX_UPLOAD_MB: z.string().default('10'),
   SYNTHESIS_LOG_RETENTION_DAYS: z.string().regex(/^\d+$/).default('30'),
-  SYNTHESIS_LOG_TEXT_MODE: z.enum(['redacted', 'full', 'preview']).default('redacted'),
   RATE_LIMIT_WINDOW_MS: z.string().default('60000'),
   RATE_LIMIT_MAX_REQUESTS: z.string().default('60'),
 });
@@ -61,7 +60,6 @@ export const config = {
   },
   synthesisLog: {
     retentionDays: parseInt(env.SYNTHESIS_LOG_RETENTION_DAYS, 10),
-    textMode: env.SYNTHESIS_LOG_TEXT_MODE,
   },
   rateLimit: {
     windowMs: parseInt(env.RATE_LIMIT_WINDOW_MS, 10),

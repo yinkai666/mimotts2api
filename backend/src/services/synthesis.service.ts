@@ -1,6 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 import { Voice } from '@prisma/client';
-import { createHash } from 'crypto';
 import { config } from '../config/env';
 import { MiMoProvider } from '../providers/mimo-provider';
 import { SynthesizeParams } from '../providers/tts-provider';
@@ -8,28 +7,6 @@ import { SynthesizeParams } from '../providers/tts-provider';
 const prisma = new PrismaClient();
 const DAY_MS = 24 * 60 * 60 * 1000;
 const CLEANUP_INTERVAL_MS = DAY_MS;
-const PREVIEW_TEXT_LENGTH = 80;
-
-export type SynthesisLogTextMode = 'redacted' | 'full' | 'preview';
-
-export function formatSynthesisLogInputText(
-  inputText: string,
-  mode: SynthesisLogTextMode = config.synthesisLog.textMode
-): string {
-  if (!inputText) return '';
-  if (mode === 'full') return inputText;
-
-  const hash = createHash('sha256').update(inputText).digest('hex');
-  if (mode === 'preview') {
-    const preview =
-      inputText.length > PREVIEW_TEXT_LENGTH
-        ? `${inputText.slice(0, PREVIEW_TEXT_LENGTH)}...`
-        : inputText;
-    return `[preview length=${inputText.length} sha256=${hash}] ${preview}`;
-  }
-
-  return `[redacted length=${inputText.length} sha256=${hash}]`;
-}
 
 export class SynthesisService {
   private mimoProvider: MiMoProvider;
@@ -243,12 +220,7 @@ export class SynthesisService {
     userAgent?: string;
   }) {
     try {
-      await prisma.synthesisLog.create({
-        data: {
-          ...data,
-          inputText: formatSynthesisLogInputText(data.inputText),
-        },
-      });
+      await prisma.synthesisLog.create({ data });
     } catch (error) {
       console.error('Failed to log synthesis:', error);
     }
