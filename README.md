@@ -1,11 +1,26 @@
-# MiMo TTS Proxy Manager
+<p align="center">
+  <img src="./frontend/public/icon.png" alt="MiMo TTS Proxy Manager" width="180" />
+</p>
 
-> 一个完整的自建代理服务，用于将小米 MiMo TTS 接入爱阅记的高级自定义 TTS。
+<h1 align="center">MiMo TTS Proxy Manager</h1>
 
-[![GitHub](https://img.shields.io/badge/GitHub-yinkai666%2Fmimotts2api-blue?logo=github)](https://github.com/yinkai666/mimotts2api)
-[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/yinkai666/mimotts2api/blob/main/LICENSE)
+---
 
-一个完整的自建代理服务，用于将小米 MiMo TTS 接入爱阅记的高级自定义 TTS。
+<p align="center">
+  <a href="https://github.com/yinkai666/mimotts2api">
+    <img src="https://img.shields.io/badge/GitHub-yinkai666%2Fmimotts2api-24292f?logo=github" alt="GitHub" />
+  </a>
+  <img src="https://img.shields.io/badge/Next.js-14-000000?logo=nextdotjs" alt="Next.js 14" />
+  <img src="https://img.shields.io/badge/Fastify-TypeScript-202020?logo=fastify" alt="Fastify TypeScript" />
+  <img src="https://img.shields.io/badge/Docker-ready-2496ed?logo=docker&logoColor=white" alt="Docker ready" />
+  <a href="https://github.com/yinkai666/mimotts2api/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-6b7280" alt="MIT License" />
+  </a>
+</p>
+
+<p align="center">
+  一个完整的自建代理服务，用于将小米 MiMo TTS 接入爱阅记的高级自定义 TTS。
+</p>
 
 ## 功能特性
 
@@ -14,7 +29,7 @@
 - ✅ **爱阅记兼容接口**：提供 `/v1/audio/speech` 接口，返回纯音频二进制
 - ✅ **配置生成器**：一键生成爱阅记 JSON 配置
 - ✅ **合成日志**：记录所有合成请求和结果
-- ✅ **安全鉴权**：管理后台 JWT 认证，API 接口 Bearer Token 认证
+- ✅ **安全鉴权**：管理后台 JWT 认证，API 接口可选 Bearer Token 认证
 - ✅ **Docker 部署**：一键部署，包含 Nginx、Backend、Frontend、PostgreSQL
 - ✅ **性能优化**：Fastify 高性能框架、连接池、音频零拷贝
 
@@ -53,7 +68,7 @@ cd mimotts2api
 cp .env.example .env
 ```
 
-编辑 `.env` 文件，填写以下必需配置：
+编辑 `.env` 文件，至少填写以下配置：
 
 ```env
 # 数据库密码
@@ -65,11 +80,15 @@ JWT_SECRET=your_jwt_secret_at_least_32_characters_long
 # 管理员账号（首次初始化数据库时使用）
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=your_secure_admin_password
+```
 
+以下配置可按需填写，也可以启动后在管理后台的「设置」页面配置：
+
+```env
 # MiMo API Key（从 https://platform.xiaomimimo.com 获取）
 MIMO_API_KEY=sk-your-mimo-api-key
 
-# 代理访问 Token（自定义，用于爱阅记调用）
+# 代理访问 Token（不填则爱阅记兼容接口不需要鉴权）
 PROXY_AUTH_TOKEN=your_custom_proxy_token
 
 # 服务端口（默认 14678，避免与其他服务冲突）
@@ -100,81 +119,55 @@ docker compose up -d
 
 **前提条件**：
 - 服务器已安装 Docker 和 Docker Compose
-- 服务器防火墙已开放 14678 端口（或你自定义的端口）
+- 服务器允许开放 14678 端口（或你自定义的端口）
 
 **步骤**：
 
-1. **连接到服务器**
+1. **上传项目到服务器**
 
 ```bash
-ssh user@your-server-ip
-```
-
-2. **安装 Docker（如果未安装）**
-
-```bash
-# Ubuntu/Debian — 一条命令安装 Docker + Compose v2
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-sudo usermod -aG docker $USER
-
-# 重新登录以应用 docker 组权限
-exit
-ssh user@your-server-ip
-
-# 验证安装
-docker --version
-docker compose version
-```
-
-3. **上传项目到服务器**
-
-方式 A：使用 Git
-```bash
-cd /opt  # 或其他目录
 git clone https://github.com/yinkai666/mimotts2api.git
+```
+
+2. **配置环境变量**
+
+```bash
 cd mimotts2api
-```
-
-方式 B：使用 SCP
-```bash
-# 在本地执行
-scp -r mimotts2api user@your-server-ip:/opt/
-```
-
-4. **配置环境变量**
-
-```bash
-cd /opt/mimotts2api
 cp .env.example .env
 nano .env  # 或使用 vi
 ```
 
-填写配置：
+至少填写以下配置：
 ```env
 POSTGRES_PASSWORD=your_secure_password_here
 JWT_SECRET=your_jwt_secret_at_least_32_characters_long
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=your_secure_admin_password
+```
+
+以下配置可按需填写，也可以启动后在管理后台的「设置」页面配置：
+```env
 MIMO_API_KEY=sk-your-mimo-api-key
 PROXY_AUTH_TOKEN=your_custom_proxy_token
 PORT=14678
 ```
 
-5. **启动服务**
+3. **启动服务**
 
 ```bash
 docker compose up -d
 ```
 
-6. **查看服务状态**
+4. **查看服务状态**
 
 ```bash
 docker compose ps
 docker compose logs -f
 ```
 
-7. **配置防火墙**
+5. **按需开放端口**
+
+如果服务器或云厂商安全组已经允许访问 `PORT` 对应的端口，可以跳过这一步。否则需要开放当前服务端口，默认是 `14678`。
 
 ```bash
 # Ubuntu/Debian (ufw)
@@ -186,184 +179,9 @@ sudo firewall-cmd --permanent --add-port=14678/tcp
 sudo firewall-cmd --reload
 ```
 
-8. **访问服务**
+6. **访问服务**
 
 浏览器访问：`http://your-server-ip:14678`
-
-#### 方式二：使用域名 + HTTPS（生产环境推荐）
-
-**前提条件**：
-- 已有域名（如 `tts.example.com`）
-- 域名 DNS 已指向服务器 IP
-
-**步骤**：
-
-1. **安装 Certbot（Let's Encrypt）**
-
-```bash
-# Ubuntu/Debian
-sudo apt update
-sudo apt install certbot
-
-# CentOS/RHEL
-sudo yum install certbot
-```
-
-2. **获取 SSL 证书**
-
-```bash
-# 停止 Nginx（如果正在运行）
-docker compose stop nginx
-
-# 获取证书
-sudo certbot certonly --standalone -d tts.example.com
-
-# 证书路径：
-# /etc/letsencrypt/live/tts.example.com/fullchain.pem
-# /etc/letsencrypt/live/tts.example.com/privkey.pem
-```
-
-3. **修改 Nginx 配置**
-
-编辑 `nginx/nginx.conf`，添加 HTTPS 配置：
-
-```nginx
-events {
-    worker_connections 1024;
-}
-
-http {
-    include /etc/nginx/mime.types;
-    default_type application/octet-stream;
-
-    # Gzip compression
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/json;
-
-    upstream backend {
-        server backend:3001;
-    }
-
-    upstream frontend {
-        server frontend:3000;
-    }
-
-    # HTTP 重定向到 HTTPS
-    server {
-        listen 80;
-        server_name tts.example.com;
-        return 301 https://$server_name$request_uri;
-    }
-
-    # HTTPS 服务器
-    server {
-        listen 443 ssl http2;
-        server_name tts.example.com;
-
-        ssl_certificate /etc/letsencrypt/live/tts.example.com/fullchain.pem;
-        ssl_certificate_key /etc/letsencrypt/live/tts.example.com/privkey.pem;
-
-        ssl_protocols TLSv1.2 TLSv1.3;
-        ssl_ciphers HIGH:!aNULL:!MD5;
-        ssl_prefer_server_ciphers on;
-
-        client_max_body_size 10M;
-
-        # Frontend
-        location / {
-            proxy_pass http://frontend;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection 'upgrade';
-            proxy_set_header Host $host;
-            proxy_cache_bypass $http_upgrade;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
-
-        # Backend API
-        location /api/ {
-            proxy_pass http://backend;
-            proxy_http_version 1.1;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_read_timeout 60s;
-        }
-
-        # Aiyueji compatible endpoint
-        location /v1/audio/speech {
-            proxy_pass http://backend;
-            proxy_http_version 1.1;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_read_timeout 60s;
-            proxy_buffering off;
-        }
-
-        # Health check
-        location /health {
-            proxy_pass http://backend;
-            access_log off;
-        }
-    }
-}
-```
-
-4. **修改 docker-compose.yml**
-
-```yaml
-nginx:
-  image: nginx:alpine
-  container_name: mimotts-nginx
-  ports:
-    - "80:80"
-    - "443:443"
-  volumes:
-    - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    - /etc/letsencrypt:/etc/letsencrypt:ro
-  networks:
-    - mimotts-network
-  depends_on:
-    - backend
-    - frontend
-  restart: unless-stopped
-```
-
-5. **重启服务**
-
-```bash
-docker compose down
-docker compose up -d
-```
-
-6. **配置防火墙**
-
-```bash
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw reload
-```
-
-7. **访问服务**
-
-浏览器访问：`https://tts.example.com`
-
-8. **设置证书自动续期**
-
-```bash
-# 添加 cron 任务
-sudo crontab -e
-
-# 添加以下行（每天凌晨 2 点检查并续期）
-0 2 * * * certbot renew --quiet && docker compose -f /opt/mimotts2api/docker-compose.yml restart nginx
-```
 
 #### 服务器部署后的管理
 
@@ -392,24 +210,6 @@ docker compose build
 docker compose up -d
 ```
 
-**备份数据**：
-```bash
-# 备份数据库
-docker compose exec postgres pg_dump -U mimotts mimotts > backup_$(date +%Y%m%d).sql
-
-# 备份上传文件
-tar -czf uploads_backup_$(date +%Y%m%d).tar.gz -C /opt/mimotts2api uploads
-```
-
-**恢复数据**：
-```bash
-# 恢复数据库
-docker compose exec -T postgres psql -U mimotts mimotts < backup_20240101.sql
-
-# 恢复上传文件
-tar -xzf uploads_backup_20240101.tar.gz -C /opt/mimotts2api
-```
-
 ## 使用指南
 
 ### 管理后台
@@ -424,13 +224,7 @@ tar -xzf uploads_backup_20240101.tar.gz -C /opt/mimotts2api
 
 ### 爱阅记配置
 
-1. 在管理后台进入「配置生成器」
-2. 选择音色
-3. 填写代理服务地址（如 `https://tts.example.com`）
-4. 填写代理 Token（`.env` 中的 `PROXY_AUTH_TOKEN`）
-5. 点击「生成配置」
-6. 复制生成的 JSON 配置
-7. 在爱阅记中粘贴配置
+1. 设置 - 听书 - 在线语音库管理 - JSON输入
 
 ### 前端中的风格模板与设计音色
 
@@ -654,24 +448,25 @@ mimotts2api/
 
 | 端点 | 方法 | 说明 | 鉴权 |
 |------|------|------|------|
-| `/v1/audio/speech` | POST | 语音合成 | Bearer Token |
-| `/v1/audio/speech` | GET | 语音合成（URL 参数） | Bearer Token |
+| `/v1/audio/speech` | POST | 语音合成 | 可选 Bearer Token |
+| `/v1/audio/speech` | GET | 语音合成（URL 参数） | 可选 Bearer Token |
 
 ## 环境变量说明
 
 | 变量 | 说明 | 默认值 | 必需 |
 |------|------|--------|------|
-| `POSTGRES_PASSWORD` | PostgreSQL 密码 | - | 是 |
+| `POSTGRES_PASSWORD` | PostgreSQL 密码，生产环境建议设置强密码 | `mimotts_password`（Docker 默认） | 建议 |
 | `JWT_SECRET` | JWT 密钥 | - | 是 |
 | `ADMIN_USERNAME` | 首次初始化的管理员用户名 | `admin` | 否 |
-| `ADMIN_PASSWORD` | 首次初始化的管理员密码 | - | 是 |
-| `MIMO_API_KEY` | MiMo API Key | - | 是 |
+| `ADMIN_PASSWORD` | 首次初始化的管理员密码；数据库已有管理员后不会覆盖 | - | 首次初始化必填 |
+| `MIMO_API_KEY` | MiMo API Key，也可在管理后台设置 | - | 否 |
 | `MIMO_API_BASE_URL` | MiMo API 地址 | `https://api.xiaomimimo.com/v1` | 否 |
-| `PROXY_AUTH_TOKEN` | 代理访问 Token | - | 是 |
+| `PROXY_AUTH_TOKEN` | 代理访问 Token；不填则爱阅记兼容接口不需要鉴权 | - | 否 |
 | `MAX_UPLOAD_MB` | 最大上传大小 | `10` | 否 |
+| `SYNTHESIS_LOG_RETENTION_DAYS` | 合成日志保留天数；`0` 表示关闭自动清理 | `30` | 否 |
 | `RATE_LIMIT_WINDOW_MS` | 限流窗口（毫秒） | `60000` | 否 |
 | `RATE_LIMIT_MAX_REQUESTS` | 限流最大请求数 | `60` | 否 |
-| `PORT` | 服务端口 | `80` | 否 |
+| `PORT` | 对外服务端口 | `14678` | 否 |
 
 ## 开发指南
 
